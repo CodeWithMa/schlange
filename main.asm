@@ -1,8 +1,10 @@
 INCLUDE "hardware.inc"
 
 ; Constants
+
+; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
-DEF SNAKE_START_POS_Y EQU 10
+DEF SNAKE_START_POS_Y EQU 8
 
 DEF SNAKE_MOVE_NONE EQU 0
 DEF SNAKE_MOVE_UP EQU 1
@@ -24,12 +26,6 @@ WaitVBlank:
     ; Turn the LCD off
     ld a, 0
     ld [rLCDC], a
-
-    ; Copy the Snake Dot tile
-    ; ld de, SnakeDot
-    ; ld hl, _VRAM
-    ; ld bc, SnakeDotEnd - SnakeDot
-    ; call Memcopy
 
     ; SnakeHeadData
     ld de, SnakeHeadData
@@ -67,21 +63,15 @@ ClearOam:
     ; Once OAM is clear, we can draw an object by writing its properties.
     ; Initialize the snake head sprite in OAM
     ld hl, _OAMRAM
-    ; TODO Use Position variable Y
-    ld a, 128 + 16
+    ld a, SNAKE_START_POS_Y * 8
+    add a, 16 ; y offset to make it start at 0
     ld [hli], a
-    ; TODO Use Position variable X
-    ld a, 128 + 8
+    ld a, SNAKE_START_POS_X * 8
+    add a, 8 ; x offset to make it start at 0
     ld [hli], a
     ld a, 0
     ld [hli], a
     ld [hli], a
-
-    ; The snake starts in the middle
-    ld a, SNAKE_START_POS_X
-    ld [wSnakeHeadPosX], a
-    ld a, SNAKE_START_POS_Y
-    ld [wSnakeHeadPosY], a
 
     ; Snake is not moving until first key press
     ld a, SNAKE_MOVE_NONE
@@ -479,17 +469,6 @@ Memcopy:
     jp nz, Memcopy
     ret
 
-SnakeDot:
-    dw `33333333
-    dw `33333333
-    dw `33333333
-    dw `33333333
-    dw `33333333
-    dw `33333333
-    dw `33333333
-    dw `33333333
-SnakeDotEnd:
-
 BackgroundTiles: INCBIN "gfx/background.2bpp"
 BackgroundTilesEnd:
 
@@ -510,10 +489,6 @@ wFrameCounter: db
 SECTION "Input Variables", WRAM0
 wCurKeys: db
 wNewKeys: db
-
-SECTION "Snake Head Position", WRAM0
-wSnakeHeadPosX: db
-wSnakeHeadPosY: db
 
 SECTION "Snake Head Direction", WRAM0
 wSnakeMovement: db

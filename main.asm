@@ -27,6 +27,8 @@ WaitVBlank:
     ld a, 0
     ld [rLCDC], a
 
+    ; Load tiles
+    
     ; SnakeHeadData
     ld de, SnakeHeadData
     ld hl, _VRAM

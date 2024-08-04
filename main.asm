@@ -4,6 +4,13 @@ INCLUDE "hardware.inc"
 
 DEF TILE_SIZE EQU 8
 
+DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
+DEF SNAKE_BODY_VERTICAL_TILE_ID EQU 9 + 3
+DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 5
+DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU 9 + 0
+DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 6
+DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU 9 + 2
+
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
 DEF SNAKE_START_POS_Y EQU 8
@@ -79,7 +86,8 @@ ClearOam:
 
     ; Snake is not moving until first key press
     ld a, SNAKE_MOVE_NONE
-    ld [wSnakeMovement], a
+    ld [wSnakeDirection], a
+    ld [wPreviousSnakeDirection], a
 
     ; Turn the LCD on
     ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
@@ -219,7 +227,7 @@ CheckLeft:
     jp z, CheckRight
 Left:
     ld a, SNAKE_MOVE_LEFT
-    ld [wSnakeMovement], a
+    ld [wSnakeDirection], a
     jp Main
     ; ; Move the paddle one pixel to the left.
     ; ld a, [_OAMRAM + 1]
@@ -237,7 +245,7 @@ CheckRight:
     jp z, CheckUp
 Right:
     ld a, SNAKE_MOVE_RIGHT
-    ld [wSnakeMovement], a
+    ld [wSnakeDirection], a
     jp Main
     ; ; Move the paddle one pixel to the right.
     ; ld a, [_OAMRAM + 1]
@@ -255,7 +263,7 @@ CheckUp:
     jp z, CheckDown
 Up:
     ld a, SNAKE_MOVE_UP
-    ld [wSnakeMovement], a
+    ld [wSnakeDirection], a
     jp Main
     ; ; Move the paddle one pixel to the top.
     ; ld a, [_OAMRAM + 0]
@@ -273,7 +281,7 @@ CheckDown:
     jp z, Main
 Down:
     ld a, SNAKE_MOVE_DOWN
-    ld [wSnakeMovement], a
+    ld [wSnakeDirection], a
     jp Main
     ; ; Move the paddle one pixel to the bottom.
     ; ld a, [_OAMRAM + 0]
@@ -328,29 +336,141 @@ MoveSnakePosition:
     ld b, a
     ld a, [wSnakeSpeed]
     cp a, b ; Every x frames, run the following code
-    jp nz, MoveSnakePositionEnd
+    jp nz, MoveSnakePositionSkip
     ; Reset the frame counter back to 0
     ld a, 0
     ld [wFrameCounter], a
 
+    ; TODO Testing
+    ; TODO Move this into "method"? and call it?
+    ; TODO Set background tile on which snake head is to snakebody
+    ; snake head x position
+    ld a, [_OAMRAM + 1]
+    ; Offset 8 because object position top left corner is not (0,0)
+    sub a, 8
+    ld b, a
+    ; snake head y position
+    ld a, [_OAMRAM]
+    ; Offset 16 because object position top left corner is not (0,0)
+    sub a, 16
+    ld c, a
+    call GetTileByPixel
+    ; Set background to snake body tile
+    ; Depending on which direction snake is moving
+    ; Set correct tile
+
+
+
+    ld a, [wPreviousSnakeDirection]
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromLeftDirection
+    
+    ld a, [wPreviousSnakeDirection]
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromRightDirection
+
+    ld a, [wPreviousSnakeDirection]
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromUpDirection
+
+    ld a, [wPreviousSnakeDirection]
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromDownDirection
+    
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromLeftDirection:
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromLeftToUp
+
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromLeftToDown
+
+    ; From left to left
+    jp SetHorizontalSnakeTile
+
+MovingFromRightDirection:
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromRightToUp
+
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromRightToDown
+
+    ; From right to right
+    jp SetHorizontalSnakeTile
+
+MovingFromUpDirection:
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromRightToDown
+
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromLeftToDown
+
+    ; From up to up
+    jp SetVerticalSnakeTile
+
+MovingFromDownDirection:
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromRightToUp
+
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromLeftToUp
+
+    ; From down to down
+    jp SetVerticalSnakeTile
+
+SetHorizontalSnakeTile:
+    ld [hl], SNAKE_BODY_HORIZONTAL_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+SetVerticalSnakeTile:
+    ld [hl], SNAKE_BODY_VERTICAL_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromLeftToUp:
+    ld [hl], SNAKE_BODY_LEFT_TO_TOP_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromLeftToDown:
+    ld [hl], SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromRightToUp:
+    ld [hl], SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromRightToDown:
+    ld [hl], SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+SetBackgroundSnakeTileEnd:
+
     ; Add the snake's momentum to its position in OAM.
     ; CheckAndMoveLeft
-    ld a, [wSnakeMovement]
+    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
     jp z, MoveLeft
 
     ; CheckAndMoveRight
-    ld a, [wSnakeMovement]
+    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_RIGHT
     jp z, MoveRight
 
     ; CheckAndMoveUp
-    ld a, [wSnakeMovement]
+    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_UP
     jp z, MoveUp
 
     ; CheckAndMoveDown
-    ld a, [wSnakeMovement]
+    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_DOWN
     jp z, MoveDown
 
@@ -395,6 +515,10 @@ MoveDown:
     ;jp MoveSnakePositionEnd
 
 MoveSnakePositionEnd:
+    ; Save previous snake direction
+    ld a, [wSnakeDirection]
+    ld [wPreviousSnakeDirection], a
+MoveSnakePositionSkip:
     ret
 
 ; ; Checks if a brick was collided with and breaks it if possible.
@@ -417,7 +541,7 @@ MoveSnakePositionEnd:
 ;     ret
 
 ; Convert a pixel position to a tilemap address
-; hl = $9800 + X + Y * 32
+; hl = _SCRN0 + X + Y * 32
 ; @param b: X
 ; @param c: Y
 ; @return hl: tile address
@@ -444,13 +568,14 @@ GetTileByPixel:
     sub a, l
     ld h, a
     ; Add the offset to the tilemap's base address, and we are done!
-    ld bc, $9800
+    ld bc, _SCRN0
     add hl, bc
     ret
 
 ; @param a: tile ID
 ; @return z: set if a is a wall.
 IsWallTile:
+    ; TODO Use correct Tile IDs
     cp a, $00
     ret z
     cp a, $01
@@ -502,7 +627,8 @@ wCurKeys: db
 wNewKeys: db
 
 SECTION "Snake Head Direction", WRAM0
-wSnakeMovement: db
+wSnakeDirection: db
+wPreviousSnakeDirection: db
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db

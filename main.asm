@@ -472,39 +472,27 @@ SetBackgroundSnakeTileEnd:
     jp MoveSnakePositionEnd
 
 MoveLeft:
-    ; Move x pos by -1 pixel
     ld a, -1 * TILE_SIZE
-    ld b, a
-    ld a, [SNAKE_HEAD_POS_X]
-    add a, b
-    ld [SNAKE_HEAD_POS_X], a
+    ld hl, SNAKE_HEAD_POS_X
+    call MoveSnakePositionByPixel
     jp MoveSnakePositionEnd
 
 MoveRight:
-    ; Move x pos by 1 pixel
     ld a, 1 * TILE_SIZE
-    ld b, a
-    ld a, [SNAKE_HEAD_POS_X]
-    add a, b
-    ld [SNAKE_HEAD_POS_X], a
+    ld hl, SNAKE_HEAD_POS_X
+    call MoveSnakePositionByPixel
     jp MoveSnakePositionEnd
 
 MoveUp:
-    ; Move y pos by -1 pixel
     ld a, -1 * TILE_SIZE
-    ld b, a
-    ld a, [SNAKE_HEAD_POS_Y]
-    add a, b
-    ld [SNAKE_HEAD_POS_Y], a
+    ld hl, SNAKE_HEAD_POS_Y
+    call MoveSnakePositionByPixel
     jp MoveSnakePositionEnd
 
 MoveDown:
-    ; Move y pos by 1 pixel
     ld a, 1 * TILE_SIZE
-    ld b, a
-    ld a, [SNAKE_HEAD_POS_Y]
-    add a, b
-    ld [SNAKE_HEAD_POS_Y], a
+    ld hl, SNAKE_HEAD_POS_Y
+    call MoveSnakePositionByPixel
     ;jp MoveSnakePositionEnd
 
 MoveSnakePositionEnd:
@@ -512,6 +500,16 @@ MoveSnakePositionEnd:
     ld a, [wSnakeDirection]
     ld [wPreviousSnakeDirection], a
 MoveSnakePositionSkip:
+    ret
+
+; Method to move the snake's position
+; @param a: the amount to move the position by (can be positive or negative)
+; @param hl: the address of the position to modify (SNAKE_HEAD_POS_X or SNAKE_HEAD_POS_Y)
+MoveSnakePositionByPixel:
+    ld b, a
+    ld a, [hl]
+    add a, b
+    ld [hl], a
     ret
 
 ; ; Checks if a brick was collided with and breaks it if possible.

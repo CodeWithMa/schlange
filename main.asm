@@ -2,6 +2,8 @@ INCLUDE "hardware.inc"
 
 ; Constants
 
+DEF TILE_SIZE EQU 8
+
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
 DEF SNAKE_START_POS_Y EQU 8
@@ -28,7 +30,7 @@ WaitVBlank:
     ld [rLCDC], a
 
     ; Load tiles
-    
+
     ; SnakeHeadData
     ld de, SnakeHeadData
     ld hl, _VRAM
@@ -95,6 +97,9 @@ ClearOam:
     ld [wFrameCounter], a
     ld [wCurKeys], a
     ld [wNewKeys], a
+    ; Set Snake Speed to 60 -> Move once every second
+    ld a, 60
+    ld [wSnakeSpeed], a
 
 Main:
     ld a, [rLY]
@@ -320,38 +325,42 @@ MoveSnakePosition:
     ld a, [wFrameCounter]
     inc a
     ld [wFrameCounter], a
-    cp a, 15 ; Every 15 frames (a quarter of a second), run the following code
+    ld b, a
+    ld a, [wSnakeSpeed]
+    cp a, b ; Every x frames, run the following code
     jp nz, MoveSnakePositionEnd
     ; Reset the frame counter back to 0
     ld a, 0
     ld [wFrameCounter], a
 
     ; Add the snake's momentum to its position in OAM.
-CheckAndMoveLeft:
+    ; CheckAndMoveLeft
     ld a, [wSnakeMovement]
     cp a, SNAKE_MOVE_LEFT
     jp z, MoveLeft
 
-CheckAndMoveRight:
+    ; CheckAndMoveRight
     ld a, [wSnakeMovement]
     cp a, SNAKE_MOVE_RIGHT
     jp z, MoveRight
 
-CheckAndMoveUp:
+    ; CheckAndMoveUp
     ld a, [wSnakeMovement]
     cp a, SNAKE_MOVE_UP
     jp z, MoveUp
 
-CheckAndMoveDown:
+    ; CheckAndMoveDown
     ld a, [wSnakeMovement]
     cp a, SNAKE_MOVE_DOWN
     jp z, MoveDown
-    ; No Direction is set, for example at the start of the game
+
+    ; If no direction matches, jump to the end
+    ; This will happen at the start of the game
     jp MoveSnakePositionEnd
 
 MoveLeft:
     ; Move x pos by -1 pixel
-    ld a, -1
+    ld a, -1 * TILE_SIZE
     ld b, a
     ld a, [_OAMRAM + 1]
     add a, b
@@ -360,7 +369,7 @@ MoveLeft:
 
 MoveRight:
     ; Move x pos by 1 pixel
-    ld a, 1
+    ld a, 1 * TILE_SIZE
     ld b, a
     ld a, [_OAMRAM + 1]
     add a, b
@@ -369,7 +378,7 @@ MoveRight:
 
 MoveUp:
     ; Move y pos by -1 pixel
-    ld a, -1
+    ld a, -1 * TILE_SIZE
     ld b, a
     ld a, [_OAMRAM + 0]
     add a, b
@@ -378,7 +387,7 @@ MoveUp:
 
 MoveDown:
     ; Move y pos by 1 pixel
-    ld a, 1
+    ld a, 1 * TILE_SIZE
     ld b, a
     ld a, [_OAMRAM + 0]
     add a, b
@@ -494,3 +503,6 @@ wNewKeys: db
 
 SECTION "Snake Head Direction", WRAM0
 wSnakeMovement: db
+
+SECTION "Snake Speed", WRAM0
+wSnakeSpeed: db

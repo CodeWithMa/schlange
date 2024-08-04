@@ -21,6 +21,10 @@ DEF SNAKE_MOVE_DOWN EQU 2
 DEF SNAKE_MOVE_RIGHT EQU 3
 DEF SNAKE_MOVE_LEFT EQU 4
 
+; Address in which snake head position is saved
+DEF SNAKE_HEAD_POS_X EQU _OAMRAM + 1
+DEF SNAKE_HEAD_POS_Y EQU _OAMRAM
+
 SECTION "Header", ROM0[$100]
     jp EntryPoint
     ds $150 - @, 0 ; Make room for the header
@@ -345,12 +349,12 @@ MoveSnakePosition:
     ; TODO Move this into "method"? and call it?
     ; TODO Set background tile on which snake head is to snakebody
     ; snake head x position
-    ld a, [_OAMRAM + 1]
+    ld a, [SNAKE_HEAD_POS_X]
     ; Offset 8 because object position top left corner is not (0,0)
     sub a, 8
     ld b, a
     ; snake head y position
-    ld a, [_OAMRAM]
+    ld a, [SNAKE_HEAD_POS_Y]
     ; Offset 16 because object position top left corner is not (0,0)
     sub a, 16
     ld c, a
@@ -482,36 +486,36 @@ MoveLeft:
     ; Move x pos by -1 pixel
     ld a, -1 * TILE_SIZE
     ld b, a
-    ld a, [_OAMRAM + 1]
+    ld a, [SNAKE_HEAD_POS_X]
     add a, b
-    ld [_OAMRAM + 1], a
+    ld [SNAKE_HEAD_POS_X], a
     jp MoveSnakePositionEnd
 
 MoveRight:
     ; Move x pos by 1 pixel
     ld a, 1 * TILE_SIZE
     ld b, a
-    ld a, [_OAMRAM + 1]
+    ld a, [SNAKE_HEAD_POS_X]
     add a, b
-    ld [_OAMRAM + 1], a
+    ld [SNAKE_HEAD_POS_X], a
     jp MoveSnakePositionEnd
 
 MoveUp:
     ; Move y pos by -1 pixel
     ld a, -1 * TILE_SIZE
     ld b, a
-    ld a, [_OAMRAM + 0]
+    ld a, [SNAKE_HEAD_POS_Y]
     add a, b
-    ld [_OAMRAM + 0], a
+    ld [SNAKE_HEAD_POS_Y], a
     jp MoveSnakePositionEnd
 
 MoveDown:
     ; Move y pos by 1 pixel
     ld a, 1 * TILE_SIZE
     ld b, a
-    ld a, [_OAMRAM + 0]
+    ld a, [SNAKE_HEAD_POS_Y]
     add a, b
-    ld [_OAMRAM + 0], a
+    ld [SNAKE_HEAD_POS_Y], a
     ;jp MoveSnakePositionEnd
 
 MoveSnakePositionEnd:

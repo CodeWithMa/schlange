@@ -2,6 +2,9 @@ INCLUDE "hardware.inc"
 
 ; Constants
 
+DEF OBJECT_OFFSET_X EQU 8
+DEF OBJECT_OFFSET_Y EQU 16
+
 DEF TILE_SIZE EQU 8
 
 DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
@@ -345,26 +348,12 @@ MoveSnakePosition:
     ld a, 0
     ld [wFrameCounter], a
 
-    ; TODO Testing
     ; TODO Move this into "method"? and call it?
-    ; TODO Set background tile on which snake head is to snakebody
-    ; snake head x position
-    ld a, [SNAKE_HEAD_POS_X]
-    ; Offset 8 because object position top left corner is not (0,0)
-    sub a, 8
-    ld b, a
-    ; snake head y position
-    ld a, [SNAKE_HEAD_POS_Y]
-    ; Offset 16 because object position top left corner is not (0,0)
-    sub a, 16
-    ld c, a
-    call GetTileByPixel
+    ; Set background tile on which the head is at to snakebody
+    call GetSnakeHeadTileAddress
+
     ; Set background to snake body tile
     ; Depending on which direction snake is moving
-    ; Set correct tile
-
-
-
     ld a, [wPreviousSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
     jp z, MovingFromLeftDirection
@@ -543,6 +532,21 @@ MoveSnakePositionSkip:
 ;     dec hl
 ;     ld [hl], BLANK_TILE
 ;     ret
+
+; Get the tilemap address of the background tile
+; on which the snake head currently is
+; @return hl: tile address
+GetSnakeHeadTileAddress:
+    ld a, [SNAKE_HEAD_POS_X]
+    ; Offset 8 because object position top left corner is not (0,0)
+    sub a, OBJECT_OFFSET_X
+    ld b, a
+    ld a, [SNAKE_HEAD_POS_Y]
+    ; Offset 16 because object position top left corner is not (0,0)
+    sub a, OBJECT_OFFSET_Y
+    ld c, a
+    call GetTileByPixel
+    ret
 
 ; Convert a pixel position to a tilemap address
 ; hl = _SCRN0 + X + Y * 32

@@ -7,6 +7,13 @@ DEF OBJECT_OFFSET_Y EQU 16
 
 DEF TILE_SIZE EQU 8
 
+; Head tiles
+DEF SNAKE_HEAD_LEFT_TILE_ID EQU 0
+DEF SNAKE_HEAD_RIGHT_TILE_ID EQU 1
+DEF SNAKE_HEAD_DOWN_TILE_ID EQU 2
+DEF SNAKE_HEAD_UP_TILE_ID EQU 3
+
+; Body tiles
 DEF EMPTY_TILE_ID EQU 9 + 4
 DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
 DEF SNAKE_BODY_VERTICAL_TILE_ID EQU 9 + 3
@@ -14,10 +21,14 @@ DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 5
 DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU 9 + 0
 DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 6
 DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU 9 + 2
+DEF SNAKE_TAIL_TILE_ID EQU 9 + 7
 
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
 DEF SNAKE_START_POS_Y EQU 8
+
+DEF SNAKE_INITIAL_TAIL_ADDRESS EQU $9909
+DEF SNAKE_INITIAL_BODY_ADDRESS EQU $990A
 
 DEF SNAKE_MOVE_NONE EQU 0
 DEF SNAKE_MOVE_UP EQU 1
@@ -26,8 +37,10 @@ DEF SNAKE_MOVE_RIGHT EQU 3
 DEF SNAKE_MOVE_LEFT EQU 4
 
 ; Address in which snake head position is saved
-DEF SNAKE_HEAD_POS_X EQU _OAMRAM + 1
-DEF SNAKE_HEAD_POS_Y EQU _OAMRAM
+DEF SNAKE_HEAD_POS_X_ADDRESS EQU _OAMRAM + 1
+DEF SNAKE_HEAD_POS_Y_ADDRESS EQU _OAMRAM
+; Address in which the Tile ID of the snake head is saved
+DEF SNAKE_HEAD_TILE_ID_ADDRESS EQU _OAMRAM + 2
 
 SECTION "Header", ROM0[$100]
     jp EntryPoint
@@ -81,15 +94,16 @@ ClearOam:
 
     ; Once OAM is clear, we can draw an object by writing its properties.
     ; Initialize the snake head sprite in OAM
-    ld hl, SNAKE_HEAD_POS_Y
+    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
     ld a, SNAKE_START_POS_Y * 8
     add a, 16 ; y offset to make it start at 0
     ld [hli], a
     ld a, SNAKE_START_POS_X * 8
     add a, 8 ; x offset to make it start at 0
     ld [hli], a
-    ld a, 0
+    ld a, SNAKE_HEAD_RIGHT_TILE_ID
     ld [hli], a
+    ld a, 0
     ld [hli], a
 
     ; Snake is not moving until first key press
@@ -350,10 +364,17 @@ UpdateKeys:
   ret
 
 InitializeSnakeBody:
-    ;;;
+    ; set background tiles in tilemap
+    ld hl, SNAKE_INITIAL_TAIL_ADDRESS
+    ld a, SNAKE_TAIL_TILE_ID
+    ld [hli], a
+    ld a, SNAKE_BODY_HORIZONTAL_TILE_ID
+    ld [hli], a
+
     ; Set last body position
     ; TODO Initialize 2 parts for testing?
-    ld bc, _SCRN0 ; In bc is now the address of the first background tile ID
+    ;ld bc, _SCRN0; In bc is now the address of the first background tile ID
+    ld bc, SNAKE_INITIAL_BODY_ADDRESS
     
     ; set first item in wSnakeBodyPositions array
     ld hl, wSnakeBodyPositions
@@ -361,7 +382,8 @@ InitializeSnakeBody:
     inc hl
     ld [hl], c
 
-    ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
+    ;ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
+    ld bc, $9909
 
     ; set second item in wSnakeBodyPositions array
     inc hl
@@ -527,26 +549,34 @@ SetBackgroundSnakeTileEndNoBodyMovement:
 
 MoveLeft:
     ld a, -1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_X
+    ld hl, SNAKE_HEAD_POS_X_ADDRESS
     call MoveSnakePositionByPixel
+    ld a, SNAKE_HEAD_LEFT_TILE_ID
+    call UpdateSnakeHeadTileId
     jp MoveSnakePositionEnd
 
 MoveRight:
     ld a, 1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_X
+    ld hl, SNAKE_HEAD_POS_X_ADDRESS
     call MoveSnakePositionByPixel
+    ld a, SNAKE_HEAD_RIGHT_TILE_ID
+    call UpdateSnakeHeadTileId
     jp MoveSnakePositionEnd
 
 MoveUp:
     ld a, -1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_Y
+    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
     call MoveSnakePositionByPixel
+    ld a, SNAKE_HEAD_UP_TILE_ID
+    call UpdateSnakeHeadTileId
     jp MoveSnakePositionEnd
 
 MoveDown:
     ld a, 1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_Y
+    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
     call MoveSnakePositionByPixel
+    ld a, SNAKE_HEAD_DOWN_TILE_ID
+    call UpdateSnakeHeadTileId
     jp MoveSnakePositionEnd
 
 MoveSnakePositionEnd:
@@ -558,11 +588,17 @@ MoveSnakePositionSkip:
 
 ; Method to move the snake's position
 ; @param a: the amount to move the position by (can be positive or negative)
-; @param hl: the address of the position to modify (SNAKE_HEAD_POS_X or SNAKE_HEAD_POS_Y)
+; @param hl: the address of the position to modify (SNAKE_HEAD_POS_X_ADDRESS or SNAKE_HEAD_POS_Y_ADDRESS)
 MoveSnakePositionByPixel:
     ld b, a
     ld a, [hl]
     add a, b
+    ld [hl], a
+    ret
+
+; @param a: the tile id to set
+UpdateSnakeHeadTileId:
+    ld hl, SNAKE_HEAD_TILE_ID_ADDRESS
     ld [hl], a
     ret
 
@@ -648,11 +684,11 @@ DebugLoop:
 ; on which the snake head currently is
 ; @return hl: tile address
 GetSnakeHeadTileAddress:
-    ld a, [SNAKE_HEAD_POS_X]
+    ld a, [SNAKE_HEAD_POS_X_ADDRESS]
     ; Offset 8 because object position top left corner is not (0,0)
     sub a, OBJECT_OFFSET_X
     ld b, a
-    ld a, [SNAKE_HEAD_POS_Y]
+    ld a, [SNAKE_HEAD_POS_Y_ADDRESS]
     ; Offset 16 because object position top left corner is not (0,0)
     sub a, OBJECT_OFFSET_Y
     ld c, a

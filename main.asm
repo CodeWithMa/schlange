@@ -789,28 +789,3 @@ wSnakeBodyPositions: ds 720
 ; (pointer to last snake body part)
 ; If I use this instead of snake size i can directly load the last address
 wSnakeLastBodyPositionAddress: dw
-
-; Current size of the snake
-SECTION "Snake Size", WRAM0
-wSnakeSize: dw ; Use a 16-bit word to handle sizes up to 360
-
-
-
-; ; TODO Move to other methods
-; ; Get the address of a snake body part by offset
-; ; @param bc: Contains the index of the snake part we want to access (0-based)
-; ; Resulting address in HL
-; GetSnakeBodyPosAddressByOffset:
-;     ld hl, 0                 ; Clear HL
-;     add hl, bc               ; Add BC to HL (HL = index)
-;     add hl, bc               ; Multiply HL by 2 (HL = index * 2)
-;     ld de, wSnakeBodyPositions ; Load base address of the snake body positions array
-;     add hl, de               ; Add the base address to the offset
-;     ret
-
-; Example usage:
-; Load the current size of the snake into BC
-;ld bc, [wSnakeSize]
-;dec bc                    ; Convert size to zero-based index
-;call CalculateOffset
-; HL now contains the address of the last tile

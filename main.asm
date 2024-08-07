@@ -7,6 +7,7 @@ DEF OBJECT_OFFSET_Y EQU 16
 
 DEF TILE_SIZE EQU 8
 
+DEF EMPTY_TILE_ID EQU 9 + 4
 DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
 DEF SNAKE_BODY_VERTICAL_TILE_ID EQU 9 + 3
 DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 5
@@ -80,7 +81,7 @@ ClearOam:
 
     ; Once OAM is clear, we can draw an object by writing its properties.
     ; Initialize the snake head sprite in OAM
-    ld hl, _OAMRAM
+    ld hl, SNAKE_HEAD_POS_Y
     ld a, SNAKE_START_POS_Y * 8
     add a, 16 ; y offset to make it start at 0
     ld [hli], a
@@ -95,6 +96,18 @@ ClearOam:
     ld a, SNAKE_MOVE_NONE
     ld [wSnakeDirection], a
     ld [wPreviousSnakeDirection], a
+
+
+
+    ; If i want to set the starting background tiles for
+    ; the snake body it has to be done before the LCD is
+    ; turned on
+    ;call GetSnakeHeadTileAddress
+    ;ld [hl], SNAKE_BODY_VERTICAL_TILE_ID
+    call InitializeSnakeBody
+
+
+
 
     ; Turn the LCD on
     ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
@@ -112,6 +125,7 @@ ClearOam:
     ld [wFrameCounter], a
     ld [wCurKeys], a
     ld [wNewKeys], a
+    
     ; Set Snake Speed to 60 -> Move once every second
     ld a, 60
     ld [wSnakeSpeed], a
@@ -335,6 +349,36 @@ UpdateKeys:
 .knownret
   ret
 
+InitializeSnakeBody:
+    ;;;
+    ; Set last body position
+    ; TODO Initialize 2 parts for testing?
+    ld bc, _SCRN0 ; In bc is now the address of the first background tile ID
+    
+    ; set first item in wSnakeBodyPositions array
+    ld hl, wSnakeBodyPositions
+    ld [hl], b
+    inc hl
+    ld [hl], c
+
+    ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
+
+    ; set second item in wSnakeBodyPositions array
+    inc hl
+    ld [hl], b
+    inc hl
+    ld [hl], c
+
+    ; decrement by 1 to go to start of second item in array
+    dec hl
+    call SaveAddressOfLastSnakeBodyPart
+
+    ; ; initialize size
+    ; ld a, 2
+    ; ld [wSnakeSize], a
+    
+    ret
+  
 MoveSnakePosition:
     ; Load framecounter and only make the snake move every 15 frames
     ld a, [wFrameCounter]
@@ -355,29 +399,27 @@ MoveSnakePosition:
     ; Set background to snake body tile
     ; Depending on which direction snake is moving
     ld a, [wPreviousSnakeDirection]
+
     cp a, SNAKE_MOVE_LEFT
     jp z, MovingFromLeftDirection
     
-    ld a, [wPreviousSnakeDirection]
     cp a, SNAKE_MOVE_RIGHT
     jp z, MovingFromRightDirection
 
-    ld a, [wPreviousSnakeDirection]
     cp a, SNAKE_MOVE_UP
     jp z, MovingFromUpDirection
 
-    ld a, [wPreviousSnakeDirection]
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromDownDirection
     
-    jp SetBackgroundSnakeTileEnd
+    jp SetBackgroundSnakeTileEndNoBodyMovement
 
 MovingFromLeftDirection:
     ld a, [wSnakeDirection]
+
     cp a, SNAKE_MOVE_UP
     jp z, MovingFromLeftToUp
 
-    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromLeftToDown
 
@@ -386,10 +428,10 @@ MovingFromLeftDirection:
 
 MovingFromRightDirection:
     ld a, [wSnakeDirection]
+
     cp a, SNAKE_MOVE_UP
     jp z, MovingFromRightToUp
 
-    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromRightToDown
 
@@ -398,10 +440,10 @@ MovingFromRightDirection:
 
 MovingFromUpDirection:
     ld a, [wSnakeDirection]
+
     cp a, SNAKE_MOVE_LEFT
     jp z, MovingFromRightToDown
 
-    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_RIGHT
     jp z, MovingFromLeftToDown
 
@@ -410,10 +452,10 @@ MovingFromUpDirection:
 
 MovingFromDownDirection:
     ld a, [wSnakeDirection]
+
     cp a, SNAKE_MOVE_LEFT
     jp z, MovingFromRightToUp
 
-    ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_RIGHT
     jp z, MovingFromLeftToUp
 
@@ -445,6 +487,18 @@ MovingFromRightToDown:
     jp SetBackgroundSnakeTileEnd
 
 SetBackgroundSnakeTileEnd:
+
+    ; save hl in de because we need to save the address
+    ; to the first position after moving everything down
+    ld d, h
+    ld e, l
+
+    call LoadLastSnakeBodyPositionAddress
+
+    ; loop and move all addresse one down overriting the last one
+    call MoveSnakeBody
+    
+SetBackgroundSnakeTileEndNoBodyMovement:
 
     ; Add the snake's momentum to its position in OAM.
     ; CheckAndMoveLeft
@@ -493,7 +547,7 @@ MoveDown:
     ld a, 1 * TILE_SIZE
     ld hl, SNAKE_HEAD_POS_Y
     call MoveSnakePositionByPixel
-    ;jp MoveSnakePositionEnd
+    jp MoveSnakePositionEnd
 
 MoveSnakePositionEnd:
     ; Save previous snake direction
@@ -511,6 +565,65 @@ MoveSnakePositionByPixel:
     add a, b
     ld [hl], a
     ret
+
+; loop and move all addresse one down overriding the last one
+; @param hl: the address of the last snake body position
+MoveSnakeBody:
+    ; Get address pointed to by hl
+    ld b, [hl]
+    inc hl
+    ld c, [hl]
+    ; bc contains address of last tile in tilemap
+
+    ; Set empty background tile to last position
+    ld a, EMPTY_TILE_ID
+    ; TODO For testing: This sets the last tile to snake body vertiaal
+    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
+    ld [bc], a
+    
+    ; hl has to be the last byte of the array for this to work
+    ; This block overrides the byte pointed to by hl with hl-2
+    ; After this block hl is decremented by 1
+MoveArrayItemsLoop:
+    dec hl
+    dec hl
+    ld a, [hli]
+    inc hl
+    ld [hld], a
+
+    ; if hl is base address + 1 we are done
+    ; compare first byte of hl
+    ld bc, wSnakeBodyPositions + 1
+    ld a, b
+    cp a, h
+    jp z, MoveArrayItemsLoopIsBaseAddressPart1
+
+    ; else continue loop
+    jp MoveArrayItemsLoop
+
+MoveArrayItemsLoopIsBaseAddressPart1:
+    ; compare second byte of hl
+    ld a, c
+    cp a, l
+    jp z, MoveArrayItemsLoopEnd
+
+    ; else continue loop
+    jp MoveArrayItemsLoop
+
+MoveArrayItemsLoopEnd:
+
+    ; After moving every body part back
+    ; set the first body part to the one we
+    ; are standing on
+    ; de contains the address to save
+    ld [hl], e
+    dec hl
+    ld [hl], d
+
+    ret
+
+DebugLoop:
+    jp DebugLoop
 
 ; ; Checks if a brick was collided with and breaks it if possible.
 ; ; @param hl: address of tile.
@@ -544,6 +657,33 @@ GetSnakeHeadTileAddress:
     sub a, OBJECT_OFFSET_Y
     ld c, a
     call GetTileByPixel
+    ret
+
+; ; loads the snake size into bc
+; ; @return bc: snake size
+; LoadSnakeSize:
+;     ld a, [wSnakeSize]
+;     ld b, a
+;     ld a, [wSnakeSize + 1]
+;     ld c, a
+;     ret
+
+; Save the last snake body position address hl into wSnakeLastBodyPositionAddress
+; @return hl: address of last body position
+SaveAddressOfLastSnakeBodyPart:
+    ld a, h
+    ld [wSnakeLastBodyPositionAddress], a
+    ld a, l
+    ld [wSnakeLastBodyPositionAddress + 1], a
+    ret
+
+; Load the last snake body position address into hl
+; @return hl: address of last body position
+LoadLastSnakeBodyPositionAddress:
+    ld a, [wSnakeLastBodyPositionAddress]
+    ld h, a
+    ld a, [wSnakeLastBodyPositionAddress + 1]
+    ld l, a
     ret
 
 ; Convert a pixel position to a tilemap address
@@ -638,3 +778,39 @@ wPreviousSnakeDirection: db
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db
+
+; 20*18 = 360 possible tile positions
+; Contains the addresses of the tiles in the tilemap on which a body part is
+; Each address needs 2 bytes so 360 * 2 bytes = 720 bytes
+SECTION "Snake Body Positions", WRAM0
+wSnakeBodyPositions: ds 720
+
+; Contains the address of the last snake body part in wSnakeBodyPositions
+; (pointer to last snake body part)
+; If I use this instead of snake size i can directly load the last address
+wSnakeLastBodyPositionAddress: dw
+
+; Current size of the snake
+SECTION "Snake Size", WRAM0
+wSnakeSize: dw ; Use a 16-bit word to handle sizes up to 360
+
+
+
+; ; TODO Move to other methods
+; ; Get the address of a snake body part by offset
+; ; @param bc: Contains the index of the snake part we want to access (0-based)
+; ; Resulting address in HL
+; GetSnakeBodyPosAddressByOffset:
+;     ld hl, 0                 ; Clear HL
+;     add hl, bc               ; Add BC to HL (HL = index)
+;     add hl, bc               ; Multiply HL by 2 (HL = index * 2)
+;     ld de, wSnakeBodyPositions ; Load base address of the snake body positions array
+;     add hl, de               ; Add the base address to the offset
+;     ret
+
+; Example usage:
+; Load the current size of the snake into BC
+;ld bc, [wSnakeSize]
+;dec bc                    ; Convert size to zero-based index
+;call CalculateOffset
+; HL now contains the address of the last tile

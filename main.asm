@@ -21,14 +21,19 @@ DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 5
 DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU 9 + 0
 DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 6
 DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU 9 + 2
-DEF SNAKE_TAIL_TILE_ID EQU 9 + 7
+
+; Tail tiles
+DEF SNAKE_TAIL_LEFT_TILE_ID EQU 9 + 7
+DEF SNAKE_TAIL_RIGHT_TILE_ID EQU 9 + 8
+DEF SNAKE_TAIL_DOWN_TILE_ID EQU 9 + 9
+DEF SNAKE_TAIL_UP_TILE_ID EQU 9 + 10
 
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
 DEF SNAKE_START_POS_Y EQU 8
 
-DEF SNAKE_INITIAL_TAIL_ADDRESS EQU $9909
-DEF SNAKE_INITIAL_BODY_ADDRESS EQU $990A
+DEF SNAKE_INITIAL_TAIL_ADDRESS EQU $9908
+DEF SNAKE_INITIAL_BODY_ADDRESS EQU $9909
 
 DEF SNAKE_MOVE_NONE EQU 0
 DEF SNAKE_MOVE_UP EQU 1
@@ -109,6 +114,7 @@ ClearOam:
     ; Snake is not moving until first key press
     ld a, SNAKE_MOVE_NONE
     ld [wSnakeDirection], a
+    ld a, SNAKE_MOVE_RIGHT
     ld [wPreviousSnakeDirection], a
 
 
@@ -366,14 +372,12 @@ UpdateKeys:
 InitializeSnakeBody:
     ; set background tiles in tilemap
     ld hl, SNAKE_INITIAL_TAIL_ADDRESS
-    ld a, SNAKE_TAIL_TILE_ID
+    ld a, SNAKE_TAIL_LEFT_TILE_ID
     ld [hli], a
     ld a, SNAKE_BODY_HORIZONTAL_TILE_ID
     ld [hli], a
 
-    ; Set last body position
-    ; TODO Initialize 2 parts for testing?
-    ;ld bc, _SCRN0; In bc is now the address of the first background tile ID
+
     ld bc, SNAKE_INITIAL_BODY_ADDRESS
     
     ; set first item in wSnakeBodyPositions array
@@ -383,7 +387,7 @@ InitializeSnakeBody:
     ld [hl], c
 
     ;ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
-    ld bc, $9909
+    ld bc, SNAKE_INITIAL_TAIL_ADDRESS
 
     ; set second item in wSnakeBodyPositions array
     inc hl
@@ -445,6 +449,9 @@ MovingFromLeftDirection:
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromLeftToDown
 
+    cp a, SNAKE_MOVE_NONE
+    jp z, MoveSnakePositionSkip
+
     ; From left to left
     jp SetHorizontalSnakeTile
 
@@ -456,6 +463,9 @@ MovingFromRightDirection:
 
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromRightToDown
+
+    cp a, SNAKE_MOVE_NONE
+    jp z, MoveSnakePositionSkip
 
     ; From right to right
     jp SetHorizontalSnakeTile
@@ -469,6 +479,9 @@ MovingFromUpDirection:
     cp a, SNAKE_MOVE_RIGHT
     jp z, MovingFromLeftToDown
 
+    cp a, SNAKE_MOVE_NONE
+    jp z, MoveSnakePositionSkip
+
     ; From up to up
     jp SetVerticalSnakeTile
 
@@ -480,6 +493,9 @@ MovingFromDownDirection:
 
     cp a, SNAKE_MOVE_RIGHT
     jp z, MovingFromLeftToUp
+
+    cp a, SNAKE_MOVE_NONE
+    jp z, MoveSnakePositionSkip
 
     ; From down to down
     jp SetVerticalSnakeTile
@@ -611,13 +627,111 @@ MoveSnakeBody:
     ld c, [hl]
     ; bc contains address of last tile in tilemap
 
-    ; Set empty background tile to last position
-    ld a, EMPTY_TILE_ID
-    ; TODO For testing: This sets the last tile to snake body vertiaal
-    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
-    ld [bc], a
+    ; Check what tile id the tail on last tile is
+    ld a, [bc]
     
+    cp a, SNAKE_TAIL_LEFT_TILE_ID
+    jp z, SnakeTailWasLeft
+
+    cp a, SNAKE_TAIL_RIGHT_TILE_ID
+    jp z, SnakeTailWasRight
+
+    cp a, SNAKE_TAIL_DOWN_TILE_ID
+    jp z, SnakeTailWasDown
+
+    cp a, SNAKE_TAIL_UP_TILE_ID
+    jp z, SnakeTailWasUp
+
+SnakeTailWasLeft:
+    call SetEmptyBackgroundTileToLastPosition
+    call ReadTileIdFromTileBeforeTail
+
+    cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
+    jp z, SetLeftTail
+
+    cp a, SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    jp z, SetUpTail
+
+    cp a, SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
+    jp z, SetDownTail
+
+    ; This should never happen -> hang
+    jp DebugLoop
+
+SnakeTailWasRight:
+    call SetEmptyBackgroundTileToLastPosition
+    call ReadTileIdFromTileBeforeTail
+
+    cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
+    jp z, SetRightTail
+
+    cp a, SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
+    jp z, SetUpTail
+
+    cp a, SNAKE_BODY_LEFT_TO_TOP_TILE_ID
+    jp z, SetDownTail
+
+    ; This should never happen -> hang
+    jp DebugLoop
+
+SnakeTailWasDown:
+    call SetEmptyBackgroundTileToLastPosition
+    call ReadTileIdFromTileBeforeTail
+
+    cp a, SNAKE_BODY_VERTICAL_TILE_ID
+    jp z, SetDownTail
+
+    cp a, SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    jp z, SetRightTail
+
+    cp a, SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
+    jp z, SetLeftTail
+
+    ; This should never happen -> hang
+    jp DebugLoop
+
+SnakeTailWasUp:
+    call SetEmptyBackgroundTileToLastPosition
+    call ReadTileIdFromTileBeforeTail
+
+    cp a, SNAKE_BODY_VERTICAL_TILE_ID
+    jp z, SetUpTail
+
+    cp a, SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
+    jp z, SetRightTail
+
+    cp a, SNAKE_BODY_LEFT_TO_TOP_TILE_ID
+    jp z, SetLeftTail
+
+    ; This should never happen -> hang
+    jp DebugLoop
+
+SetLeftTail:
+    ld a, SNAKE_TAIL_LEFT_TILE_ID
+    ld [bc], a
+    jp SetTailTileEnd
+
+SetRightTail:
+    ld a, SNAKE_TAIL_RIGHT_TILE_ID
+    ld [bc], a
+    jp SetTailTileEnd
+
+SetDownTail:
+    ld a, SNAKE_TAIL_DOWN_TILE_ID
+    ld [bc], a
+    jp SetTailTileEnd
+
+SetUpTail:
+    ld a, SNAKE_TAIL_UP_TILE_ID
+    ld [bc], a
+    jp SetTailTileEnd
+
+SetTailTileEnd:
+
     ; hl has to be the last byte of the array for this to work
+    inc hl
+    inc hl
+    inc hl
     ; This block overrides the byte pointed to by hl with hl-2
     ; After this block hl is decremented by 1
 MoveArrayItemsLoop:
@@ -720,6 +834,29 @@ LoadLastSnakeBodyPositionAddress:
     ld h, a
     ld a, [wSnakeLastBodyPositionAddress + 1]
     ld l, a
+    ret
+
+; Set empty background tile to last position
+; @param bc: contains the address in the tilemap
+SetEmptyBackgroundTileToLastPosition:
+    ld a, EMPTY_TILE_ID
+    ; TODO For testing: This sets the last tile to snake body vertiaal
+    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
+    ld [bc], a
+    ret
+
+; @param hl: points to the last byte of tail
+; @returns a: tile id of tile bofore tail
+ReadTileIdFromTileBeforeTail:
+    ; Put the address of the tile that is before the tail in bc
+    dec hl
+    dec hl
+    ld c, [hl]
+    dec hl
+    ld b, [hl]
+
+    ; Read tile id from tile before tail
+    ld a, [bc]
     ret
 
 ; Convert a pixel position to a tilemap address

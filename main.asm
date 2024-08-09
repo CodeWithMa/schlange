@@ -267,6 +267,11 @@ CheckLeft:
     and a, PADF_LEFT
     jp z, CheckRight
 Left:
+    ; if old direction was right -> do not allow left
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, Main
+    ; else
     ld a, SNAKE_MOVE_LEFT
     ld [wSnakeDirection], a
     jp Main
@@ -285,6 +290,11 @@ CheckRight:
     and a, PADF_RIGHT
     jp z, CheckUp
 Right:
+    ; if old direction was left -> do not allow right
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_LEFT
+    jp z, Main
+    ; else
     ld a, SNAKE_MOVE_RIGHT
     ld [wSnakeDirection], a
     jp Main
@@ -303,6 +313,11 @@ CheckUp:
     and a, PADF_UP
     jp z, CheckDown
 Up:
+    ; if old direction was down -> do not allow up
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_DOWN
+    jp z, Main
+    ; else
     ld a, SNAKE_MOVE_UP
     ld [wSnakeDirection], a
     jp Main
@@ -321,6 +336,11 @@ CheckDown:
     and a, PADF_DOWN
     jp z, Main
 Down:
+    ; if old direction was up -> do not allow down
+    ld a, [wSnakeDirection]
+    cp a, SNAKE_MOVE_UP
+    jp z, Main
+    ; else
     ld a, SNAKE_MOVE_DOWN
     ld [wSnakeDirection], a
     jp Main

@@ -1,6 +1,6 @@
 # Schlange Gameboy ROM
 
-This repository contains the source code and assets for "Schlange," a Game Boy game developed using the [RGBDS](https://github.com/gbdev/rgbds) toolchain.
+This repository contains the source code and assets for "Schlange", a Game Boy game developed using the [RGBDS](https://github.com/gbdev/rgbds) toolchain.
 
 ## Features
 

@@ -35,7 +35,7 @@ main.o: main.asm $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY)
 # Link object file to create the ROM
 $(OUTPUT_GB): $(OBJ_FILES)
 	$(RGBLINK) -o $(OUTPUT_GB) $(OBJ_FILES)
-	$(RGBFIX) -v -p 0xFF $(OUTPUT_GB)
+	$(RGBFIX) -t "SCHLANGE" -v -p 0xFF $(OUTPUT_GB)
 
 # Clean up build artifacts
 clean:

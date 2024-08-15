@@ -28,6 +28,9 @@ DEF SNAKE_TAIL_RIGHT_TILE_ID EQU 9 + 8
 DEF SNAKE_TAIL_DOWN_TILE_ID EQU 9 + 9
 DEF SNAKE_TAIL_UP_TILE_ID EQU 9 + 10
 
+; Apple tile
+DEF APPLE_TILE_ID EQU 9 + 11
+
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
 DEF SNAKE_START_POS_Y EQU 8
@@ -82,11 +85,23 @@ WaitVBlank:
     ld bc, SnakeBodyDataEnd - SnakeBodyData
     call Memcopy
 
+    ; AppleData
+    ld de, AppleData
+    ld hl, _VRAM9000 + BackgroundTilesEnd - BackgroundTiles + SnakeBodyDataEnd - SnakeBodyData
+    ld bc, AppleDataEnd - AppleData
+    call Memcopy
+
     ; Load Background tilemap
     ld de, BackgroundTilemap
     ld hl, _SCRN0
     ld bc, BackgroundTilemapEnd - BackgroundTilemap
     call Memcopy
+
+    ; For testing set static apple
+    ; TODO Place it on a random tile that is not the snake
+    ld hl, _SCRN0 + 80
+    ld a, APPLE_TILE_ID
+    ld [hl], a
 
     ; ClearOam
     ld a, 0
@@ -117,17 +132,10 @@ ClearOam:
     ld a, SNAKE_MOVE_RIGHT
     ld [wPreviousSnakeDirection], a
 
-
-
     ; If i want to set the starting background tiles for
     ; the snake body it has to be done before the LCD is
     ; turned on
-    ;call GetSnakeHeadTileAddress
-    ;ld [hl], SNAKE_BODY_VERTICAL_TILE_ID
     call InitializeSnakeBody
-
-
-
 
     ; Turn the LCD on
     ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
@@ -401,7 +409,9 @@ InitializeSnakeBody:
     ld bc, SNAKE_INITIAL_BODY_ADDRESS
     
     ; set first item in wSnakeBodyPositions array
-    ld hl, wSnakeBodyPositions
+    ; +2 because the first item is actually the second,
+    ; first one is used for temporary setting the new position when moving
+    ld hl, wSnakeBodyPositions + 2
     ld [hl], b
     inc hl
     ld [hl], c
@@ -418,10 +428,6 @@ InitializeSnakeBody:
     ; decrement by 1 to go to start of second item in array
     dec hl
     call SaveAddressOfLastSnakeBodyPart
-
-    ; ; initialize size
-    ; ld a, 2
-    ; ld [wSnakeSize], a
     
     ret
   
@@ -433,7 +439,7 @@ MoveSnakePosition:
     ld b, a
     ld a, [wSnakeSpeed]
     cp a, b ; Every x frames, run the following code
-    jp nz, MoveSnakePositionSkip
+    jp nz, MoveHeadPositionSkip
     ; Reset the frame counter back to 0
     ld a, 0
     ld [wFrameCounter], a
@@ -442,123 +448,47 @@ MoveSnakePosition:
     ; Set background tile on which the head is at to snakebody
     call GetSnakeHeadTileAddress
 
+    ; TODO Check if on head tile was an apple?
+    ; Or check if the next tile to which head is moving is an apple?
+    ld a, [hl]
+    cp a, APPLE_TILE_ID
+    jp z, EatApple
+    jp DontEatApple
+
+EatApple:
+    ; Add one body part to snake
+    call AddBodyPartItem
+    call GetSnakeHeadTileAddress
+    ; TODO Problem now is that there is nothing on that last tile
+    ; so the tail check will not match any tail and lock up
+    ; - I could copy the last two items down and then it would probably work
+    ; - I have to copy both because the tail check also checks the item bofore the tail itself
+    ; or
+    ; - I tried jumping to the copy loop but that jumped over the head movement
+    ; - I have to only jump the tail check and setting - make the stuff i need methods
+    ;   and call them?
+
+DontEatApple:
+
     ; Set background to snake body tile
     ; Depending on which direction snake is moving
-    ld a, [wPreviousSnakeDirection]
 
-    cp a, SNAKE_MOVE_LEFT
-    jp z, MovingFromLeftDirection
-    
-    cp a, SNAKE_MOVE_RIGHT
-    jp z, MovingFromRightDirection
-
-    cp a, SNAKE_MOVE_UP
-    jp z, MovingFromUpDirection
-
-    cp a, SNAKE_MOVE_DOWN
-    jp z, MovingFromDownDirection
-    
-    jp SetBackgroundSnakeTileEndNoBodyMovement
-
-MovingFromLeftDirection:
     ld a, [wSnakeDirection]
-
-    cp a, SNAKE_MOVE_UP
-    jp z, MovingFromLeftToUp
-
-    cp a, SNAKE_MOVE_DOWN
-    jp z, MovingFromLeftToDown
-
     cp a, SNAKE_MOVE_NONE
-    jp z, MoveSnakePositionSkip
+    jp z, MoveHeadPositionSkip
 
-    ; From left to left
-    jp SetHorizontalSnakeTile
-
-MovingFromRightDirection:
-    ld a, [wSnakeDirection]
-
-    cp a, SNAKE_MOVE_UP
-    jp z, MovingFromRightToUp
-
-    cp a, SNAKE_MOVE_DOWN
-    jp z, MovingFromRightToDown
-
-    cp a, SNAKE_MOVE_NONE
-    jp z, MoveSnakePositionSkip
-
-    ; From right to right
-    jp SetHorizontalSnakeTile
-
-MovingFromUpDirection:
-    ld a, [wSnakeDirection]
-
-    cp a, SNAKE_MOVE_LEFT
-    jp z, MovingFromRightToDown
-
-    cp a, SNAKE_MOVE_RIGHT
-    jp z, MovingFromLeftToDown
-
-    cp a, SNAKE_MOVE_NONE
-    jp z, MoveSnakePositionSkip
-
-    ; From up to up
-    jp SetVerticalSnakeTile
-
-MovingFromDownDirection:
-    ld a, [wSnakeDirection]
-
-    cp a, SNAKE_MOVE_LEFT
-    jp z, MovingFromRightToUp
-
-    cp a, SNAKE_MOVE_RIGHT
-    jp z, MovingFromLeftToUp
-
-    cp a, SNAKE_MOVE_NONE
-    jp z, MoveSnakePositionSkip
-
-    ; From down to down
-    jp SetVerticalSnakeTile
-
-SetHorizontalSnakeTile:
-    ld [hl], SNAKE_BODY_HORIZONTAL_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-SetVerticalSnakeTile:
-    ld [hl], SNAKE_BODY_VERTICAL_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-MovingFromLeftToUp:
-    ld [hl], SNAKE_BODY_LEFT_TO_TOP_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-MovingFromLeftToDown:
-    ld [hl], SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-MovingFromRightToUp:
-    ld [hl], SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-MovingFromRightToDown:
-    ld [hl], SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
-    jp SetBackgroundSnakeTileEnd
-
-SetBackgroundSnakeTileEnd:
-
-    ; save hl in de because we need to save the address
-    ; to the first position after moving everything down
-    ld d, h
-    ld e, l
-
+    call SetBackgroundSnakeTile
+    call SaveNewPositionToBodyArray
     call LoadLastSnakeBodyPositionAddress
-
     ; loop and move all addresse one down overriting the last one
     call MoveSnakeBody
-    
-SetBackgroundSnakeTileEndNoBodyMovement:
+    call MoveHeadPosition
+  
+MoveHeadPositionSkip:
+    ret
 
-    ; Add the snake's momentum to its position in OAM.
+; Add the snake's momentum to its position in OAM.
+MoveHeadPosition:
     ; CheckAndMoveLeft
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
@@ -579,9 +509,8 @@ SetBackgroundSnakeTileEndNoBodyMovement:
     cp a, SNAKE_MOVE_DOWN
     jp z, MoveDown
 
-    ; If no direction matches, jump to the end
-    ; This will happen at the start of the game
-    jp MoveSnakePositionEnd
+    ; this should never happen -> hang
+    jp DebugLoop
 
 MoveLeft:
     ld a, -1 * TILE_SIZE
@@ -589,7 +518,7 @@ MoveLeft:
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_LEFT_TILE_ID
     call UpdateSnakeHeadTileId
-    jp MoveSnakePositionEnd
+    jp MoveHeadPositionEnd
 
 MoveRight:
     ld a, 1 * TILE_SIZE
@@ -597,7 +526,7 @@ MoveRight:
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_RIGHT_TILE_ID
     call UpdateSnakeHeadTileId
-    jp MoveSnakePositionEnd
+    jp MoveHeadPositionEnd
 
 MoveUp:
     ld a, -1 * TILE_SIZE
@@ -605,7 +534,7 @@ MoveUp:
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_UP_TILE_ID
     call UpdateSnakeHeadTileId
-    jp MoveSnakePositionEnd
+    jp MoveHeadPositionEnd
 
 MoveDown:
     ld a, 1 * TILE_SIZE
@@ -613,15 +542,14 @@ MoveDown:
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_DOWN_TILE_ID
     call UpdateSnakeHeadTileId
-    jp MoveSnakePositionEnd
+    jp MoveHeadPositionEnd
 
-MoveSnakePositionEnd:
+MoveHeadPositionEnd:
     ; Save previous snake direction
     ld a, [wSnakeDirection]
     ld [wPreviousSnakeDirection], a
-MoveSnakePositionSkip:
     ret
-
+    
 ; Method to move the snake's position
 ; @param a: the amount to move the position by (can be positive or negative)
 ; @param hl: the address of the position to modify (SNAKE_HEAD_POS_X_ADDRESS or SNAKE_HEAD_POS_Y_ADDRESS)
@@ -641,6 +569,105 @@ UpdateSnakeHeadTileId:
 ; loop and move all addresse one down overriding the last one
 ; @param hl: the address of the last snake body position
 MoveSnakeBody:
+    call SetNewSnakeTail
+
+    call MoveArrayItemsLoop
+
+    ret
+
+DebugLoop:
+    jp DebugLoop
+
+; ; Checks if a brick was collided with and breaks it if possible.
+; ; @param hl: address of tile.
+; CheckAndHandleBrick:
+;     ld a, [hl]
+;     cp a, BRICK_LEFT
+;     jr nz, CheckAndHandleBrickRight
+;     ; Break a brick from the left side.
+;     ld [hl], BLANK_TILE
+;     inc hl
+;     ld [hl], BLANK_TILE
+; CheckAndHandleBrickRight:
+;     cp a, BRICK_RIGHT
+;     ret nz
+;     ; Break a brick from the right side.
+;     ld [hl], BLANK_TILE
+;     dec hl
+;     ld [hl], BLANK_TILE
+;     ret
+
+; Get the tilemap address of the background tile
+; on which the snake head currently is
+; @return hl: tile address
+GetSnakeHeadTileAddress:
+    ld a, [SNAKE_HEAD_POS_X_ADDRESS]
+    ; Offset 8 because object position top left corner is not (0,0)
+    sub a, OBJECT_OFFSET_X
+    ld b, a
+    ld a, [SNAKE_HEAD_POS_Y_ADDRESS]
+    ; Offset 16 because object position top left corner is not (0,0)
+    sub a, OBJECT_OFFSET_Y
+    ld c, a
+    call GetTileByPixel
+    ret
+
+; Save the last snake body position address hl into wSnakeLastBodyPositionAddress
+; @return hl: address of last body position
+SaveAddressOfLastSnakeBodyPart:
+    ld a, h
+    ld [wSnakeLastBodyPositionAddress], a
+    ld a, l
+    ld [wSnakeLastBodyPositionAddress + 1], a
+    ret
+
+; Load the last snake body position address into hl
+; @return hl: address of last body position
+LoadLastSnakeBodyPositionAddress:
+    ld a, [wSnakeLastBodyPositionAddress]
+    ld h, a
+    ld a, [wSnakeLastBodyPositionAddress + 1]
+    ld l, a
+    ret
+
+; Add one item to the body part array
+; by increasing the pointer
+AddBodyPartItem:
+    call LoadLastSnakeBodyPositionAddress
+    inc [hl]
+    inc [hl]
+    ret
+
+; Set empty background tile to last position
+; @param bc: contains the address in the tilemap
+SetEmptyBackgroundTileToLastPosition:
+    ld a, EMPTY_TILE_ID
+    ; TODO For testing: This sets the last tile to snake body vertiaal
+    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
+    ld [bc], a
+    ret
+
+; @param hl: points to the last byte of tail
+; @returns a: tile id of tile bofore tail
+ReadTileIdFromTileBeforeTail:
+    ; Put the address of the tile that is before the tail in bc
+    dec hl
+    dec hl
+    ld c, [hl]
+    dec hl
+    ld b, [hl]
+
+    ; Read tile id from tile before tail
+    ld a, [bc]
+
+    ; undo changes to hl
+    inc hl
+    inc hl
+    inc hl
+    ret
+
+; @param hl: the address of the last snake body position
+SetNewSnakeTail:
     ; Get address pointed to by hl
     ld b, [hl]
     inc hl
@@ -661,6 +688,9 @@ MoveSnakeBody:
 
     cp a, SNAKE_TAIL_UP_TILE_ID
     jp z, SnakeTailWasUp
+
+    ; This should never happen -> hang
+    jp DebugLoop
 
 SnakeTailWasLeft:
     call SetEmptyBackgroundTileToLastPosition
@@ -747,13 +777,120 @@ SetUpTail:
     jp SetTailTileEnd
 
 SetTailTileEnd:
+    ret
 
-    ; hl has to be the last byte of the array for this to work
+; Set background on which the snake head is to
+; the correct next body tile id
+; @param hl: tilemap address of the background tile
+SetBackgroundSnakeTile:
+    ld a, [wPreviousSnakeDirection]
+
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromLeftDirection
+    
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromRightDirection
+
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromUpDirection
+
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromDownDirection
+    
+    jp DebugLoop
+
+MovingFromLeftDirection:
+    ld a, [wSnakeDirection]
+
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromLeftToUp
+
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromLeftToDown
+
+    ; From left to left
+    jp SetHorizontalSnakeTile
+
+MovingFromRightDirection:
+    ld a, [wSnakeDirection]
+
+    cp a, SNAKE_MOVE_UP
+    jp z, MovingFromRightToUp
+
+    cp a, SNAKE_MOVE_DOWN
+    jp z, MovingFromRightToDown
+
+    ; From right to right
+    jp SetHorizontalSnakeTile
+
+MovingFromUpDirection:
+    ld a, [wSnakeDirection]
+
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromRightToDown
+
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromLeftToDown
+
+    ; From up to up
+    jp SetVerticalSnakeTile
+
+MovingFromDownDirection:
+    ld a, [wSnakeDirection]
+
+    cp a, SNAKE_MOVE_LEFT
+    jp z, MovingFromRightToUp
+
+    cp a, SNAKE_MOVE_RIGHT
+    jp z, MovingFromLeftToUp
+
+    ; From down to down
+    jp SetVerticalSnakeTile
+
+SetHorizontalSnakeTile:
+    ld [hl], SNAKE_BODY_HORIZONTAL_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+SetVerticalSnakeTile:
+    ld [hl], SNAKE_BODY_VERTICAL_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromLeftToUp:
+    ld [hl], SNAKE_BODY_LEFT_TO_TOP_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromLeftToDown:
+    ld [hl], SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromRightToUp:
+    ld [hl], SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+MovingFromRightToDown:
+    ld [hl], SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    jp SetBackgroundSnakeTileEnd
+
+SetBackgroundSnakeTileEnd:
+    ret
+
+SaveNewPositionToBodyArray:
+    ; Save the new position to the body array
+    ld d, h
+    ld e, l
+    ; Before moving every body part back
+    ; set the item before the first body part to the one we
+    ; are standing on when moving down it will be the first
+    ld hl, wSnakeBodyPositions
+    ld [hl], d
     inc hl
-    inc hl
-    inc hl
-    ; This block overrides the byte pointed to by hl with hl-2
-    ; After this block hl is decremented by 1
+    ld [hl], e
+    
+    ret
+
+; hl has to be the last byte of the array for this to work
+; This block overrides the byte pointed to by hl with hl-2
+; After this block hl is decremented by 1
 MoveArrayItemsLoop:
     dec hl
     dec hl
@@ -781,102 +918,6 @@ MoveArrayItemsLoopIsBaseAddressPart1:
     jp MoveArrayItemsLoop
 
 MoveArrayItemsLoopEnd:
-
-    ; After moving every body part back
-    ; set the first body part to the one we
-    ; are standing on
-    ; de contains the address to save
-    ld [hl], e
-    dec hl
-    ld [hl], d
-
-    ret
-
-DebugLoop:
-    jp DebugLoop
-
-; ; Checks if a brick was collided with and breaks it if possible.
-; ; @param hl: address of tile.
-; CheckAndHandleBrick:
-;     ld a, [hl]
-;     cp a, BRICK_LEFT
-;     jr nz, CheckAndHandleBrickRight
-;     ; Break a brick from the left side.
-;     ld [hl], BLANK_TILE
-;     inc hl
-;     ld [hl], BLANK_TILE
-; CheckAndHandleBrickRight:
-;     cp a, BRICK_RIGHT
-;     ret nz
-;     ; Break a brick from the right side.
-;     ld [hl], BLANK_TILE
-;     dec hl
-;     ld [hl], BLANK_TILE
-;     ret
-
-; Get the tilemap address of the background tile
-; on which the snake head currently is
-; @return hl: tile address
-GetSnakeHeadTileAddress:
-    ld a, [SNAKE_HEAD_POS_X_ADDRESS]
-    ; Offset 8 because object position top left corner is not (0,0)
-    sub a, OBJECT_OFFSET_X
-    ld b, a
-    ld a, [SNAKE_HEAD_POS_Y_ADDRESS]
-    ; Offset 16 because object position top left corner is not (0,0)
-    sub a, OBJECT_OFFSET_Y
-    ld c, a
-    call GetTileByPixel
-    ret
-
-; ; loads the snake size into bc
-; ; @return bc: snake size
-; LoadSnakeSize:
-;     ld a, [wSnakeSize]
-;     ld b, a
-;     ld a, [wSnakeSize + 1]
-;     ld c, a
-;     ret
-
-; Save the last snake body position address hl into wSnakeLastBodyPositionAddress
-; @return hl: address of last body position
-SaveAddressOfLastSnakeBodyPart:
-    ld a, h
-    ld [wSnakeLastBodyPositionAddress], a
-    ld a, l
-    ld [wSnakeLastBodyPositionAddress + 1], a
-    ret
-
-; Load the last snake body position address into hl
-; @return hl: address of last body position
-LoadLastSnakeBodyPositionAddress:
-    ld a, [wSnakeLastBodyPositionAddress]
-    ld h, a
-    ld a, [wSnakeLastBodyPositionAddress + 1]
-    ld l, a
-    ret
-
-; Set empty background tile to last position
-; @param bc: contains the address in the tilemap
-SetEmptyBackgroundTileToLastPosition:
-    ld a, EMPTY_TILE_ID
-    ; TODO For testing: This sets the last tile to snake body vertiaal
-    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
-    ld [bc], a
-    ret
-
-; @param hl: points to the last byte of tail
-; @returns a: tile id of tile bofore tail
-ReadTileIdFromTileBeforeTail:
-    ; Put the address of the tile that is before the tail in bc
-    dec hl
-    dec hl
-    ld c, [hl]
-    dec hl
-    ld b, [hl]
-
-    ; Read tile id from tile before tail
-    ld a, [bc]
     ret
 
 ; Convert a pixel position to a tilemap address
@@ -952,6 +993,9 @@ BackgroundTilemapEnd:
 
 SnakeBodyData: INCBIN "gfx/snake_body.2bpp"
 SnakeBodyDataEnd:
+
+AppleData: INCBIN "gfx/apple.2bpp"
+AppleDataEnd:
 
 SnakeHeadData: INCBIN "gfx/snake_head.2bpp"
 SnakeHeadDataEnd:

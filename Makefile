@@ -14,6 +14,7 @@ GFX_BACKGROUND_TILES = gfx/background.2bpp
 GFX_BACKGROUND_TILEMAP = gfx/background.tilemap
 GFX_SNAKE_HEAD = gfx/snake_head.2bpp
 GFX_SNAKE_BODY = gfx/snake_body.2bpp
+GFX_APPLE = gfx/apple.2bpp
 
 # Default target
 all: $(OUTPUT_GB)
@@ -28,8 +29,11 @@ $(GFX_SNAKE_HEAD): gfx/snake_head.png
 $(GFX_SNAKE_BODY): gfx/snake_body.png
 	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_SNAKE_BODY) --unique-tiles $<
 
+$(GFX_APPLE): gfx/apple.png
+	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_APPLE) $<
+
 # Assemble main assembly file
-main.o: main.asm $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY)
+main.o: main.asm $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY) $(GFX_APPLE)
 	$(RGBASM) -o $@ $<
 
 # Link object file to create the ROM
@@ -39,6 +43,6 @@ $(OUTPUT_GB): $(OBJ_FILES)
 
 # Clean up build artifacts
 clean:
-	rm -f $(OBJ_FILES) $(OUTPUT_GB) $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY) $(GFX_BACKGROUND_TILEMAP)
+	rm -f $(OBJ_FILES) $(OUTPUT_GB) $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY) $(GFX_APPLE) $(GFX_BACKGROUND_TILEMAP)
 
 .PHONY: all clean

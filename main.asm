@@ -99,7 +99,7 @@ WaitVBlank:
 
     ; For testing set static apple
     ; TODO Place it on a random tile that is not the snake
-    ld hl, _SCRN0 + 80
+    ld hl, _SCRN0 + 200
     ld a, APPLE_TILE_ID
     ld [hl], a
 
@@ -458,15 +458,18 @@ MoveSnakePosition:
 EatApple:
     ; Add one body part to snake
     call AddBodyPartItem
+
     call GetSnakeHeadTileAddress
-    ; TODO Problem now is that there is nothing on that last tile
-    ; so the tail check will not match any tail and lock up
-    ; - I could copy the last two items down and then it would probably work
-    ; - I have to copy both because the tail check also checks the item bofore the tail itself
-    ; or
-    ; - I tried jumping to the copy loop but that jumped over the head movement
-    ; - I have to only jump the tail check and setting - make the stuff i need methods
-    ;   and call them?
+    call SetBackgroundSnakeTile
+    call SaveNewPositionToBodyArray
+    call LoadLastSnakeBodyPositionAddress
+    ; instead of calling MoveSnakeBody like below only
+    ; call the copy loop, as the body does not have
+    ; to move
+    inc hl
+    call MoveArrayItemsLoop
+    call MoveHeadPosition
+    ret
 
 DontEatApple:
 
@@ -480,7 +483,6 @@ DontEatApple:
     call SetBackgroundSnakeTile
     call SaveNewPositionToBodyArray
     call LoadLastSnakeBodyPositionAddress
-    ; loop and move all addresse one down overriting the last one
     call MoveSnakeBody
     call MoveHeadPosition
   
@@ -570,9 +572,7 @@ UpdateSnakeHeadTileId:
 ; @param hl: the address of the last snake body position
 MoveSnakeBody:
     call SetNewSnakeTail
-
     call MoveArrayItemsLoop
-
     ret
 
 DebugLoop:
@@ -634,8 +634,9 @@ LoadLastSnakeBodyPositionAddress:
 ; by increasing the pointer
 AddBodyPartItem:
     call LoadLastSnakeBodyPositionAddress
-    inc [hl]
-    inc [hl]
+    inc hl
+    inc hl
+    call SaveAddressOfLastSnakeBodyPart
     ret
 
 ; Set empty background tile to last position
@@ -759,24 +760,21 @@ SnakeTailWasUp:
 SetLeftTail:
     ld a, SNAKE_TAIL_LEFT_TILE_ID
     ld [bc], a
-    jp SetTailTileEnd
+    ret
 
 SetRightTail:
     ld a, SNAKE_TAIL_RIGHT_TILE_ID
     ld [bc], a
-    jp SetTailTileEnd
+    ret
 
 SetDownTail:
     ld a, SNAKE_TAIL_DOWN_TILE_ID
     ld [bc], a
-    jp SetTailTileEnd
+    ret
 
 SetUpTail:
     ld a, SNAKE_TAIL_UP_TILE_ID
     ld [bc], a
-    jp SetTailTileEnd
-
-SetTailTileEnd:
     ret
 
 ; Set background on which the snake head is to

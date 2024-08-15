@@ -283,14 +283,6 @@ Left:
     ld a, SNAKE_MOVE_LEFT
     ld [wSnakeDirection], a
     jp Main
-    ; ; Move the paddle one pixel to the left.
-    ; ld a, [_OAMRAM + 1]
-    ; dec a
-    ; ; If we've already hit the edge of the playfield, don't move.
-    ; cp a, 15
-    ; jp z, Main
-    ; ld [_OAMRAM + 1], a
-    ; jp Main
 
 ; Then check the right button.
 CheckRight:
@@ -306,14 +298,6 @@ Right:
     ld a, SNAKE_MOVE_RIGHT
     ld [wSnakeDirection], a
     jp Main
-    ; ; Move the paddle one pixel to the right.
-    ; ld a, [_OAMRAM + 1]
-    ; inc a
-    ; ; If we've already hit the edge of the playfield, don't move.
-    ; cp a, 105
-    ; jp z, Main
-    ; ld [_OAMRAM + 1], a
-    ; jp Main
 
 ; Then check the up button.
 CheckUp:
@@ -329,14 +313,6 @@ Up:
     ld a, SNAKE_MOVE_UP
     ld [wSnakeDirection], a
     jp Main
-    ; ; Move the paddle one pixel to the top.
-    ; ld a, [_OAMRAM + 0]
-    ; dec a
-    ; ; If we've already hit the edge of the playfield, don't move.
-    ; ; cp a, 105
-    ; ; jp z, Main
-    ; ld [_OAMRAM + 0], a
-    ; jp Main
 
 ; Then check the down button.
 CheckDown:
@@ -352,14 +328,6 @@ Down:
     ld a, SNAKE_MOVE_DOWN
     ld [wSnakeDirection], a
     jp Main
-    ; ; Move the paddle one pixel to the bottom.
-    ; ld a, [_OAMRAM + 0]
-    ; inc a
-    ; ; If we've already hit the edge of the playfield, don't move.
-    ; ; cp a, 105
-    ; ; jp z, Main
-    ; ld [_OAMRAM + 0], a
-    ; jp Main
 
 UpdateKeys:
   ; Poll half the controller
@@ -407,7 +375,7 @@ InitializeSnakeBody:
 
 
     ld bc, SNAKE_INITIAL_BODY_ADDRESS
-    
+
     ; set first item in wSnakeBodyPositions array
     ; +2 because the first item is actually the second,
     ; first one is used for temporary setting the new position when moving
@@ -428,9 +396,9 @@ InitializeSnakeBody:
     ; decrement by 1 to go to start of second item in array
     dec hl
     call SaveAddressOfLastSnakeBodyPart
-    
+
     ret
-  
+
 MoveSnakePosition:
     ; Load framecounter and only make the snake move every 15 frames
     ld a, [wFrameCounter]

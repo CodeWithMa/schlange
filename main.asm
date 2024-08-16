@@ -101,7 +101,10 @@ WaitVBlank:
     ; TODO Place it on a random tile that is not the snake
     ld hl, _SCRN0 + 200
     ld a, APPLE_TILE_ID
-    ld [hl], a
+    ld [hli], a
+    ld [hli], a
+    ld [hli], a
+
 
     ; ClearOam
     ld a, 0
@@ -412,13 +415,19 @@ MoveSnakePosition:
     ld a, 0
     ld [wFrameCounter], a
 
-    ; TODO Move this into "method"? and call it?
-    ; Set background tile on which the head is at to snakebody
+    ; Check what kind of tile the head is on
     call GetSnakeHeadTileAddress
-
-    ; TODO Check if on head tile was an apple?
-    ; Or check if the next tile to which head is moving is an apple?
     ld a, [hl]
+
+    ; If it is on a snake body tile the game is over
+    call IsSnakeBodyTileId
+    jp z, DebugLoop
+    ; If it is on a wall the game is over
+    call IsWallTileId
+    jp z, DebugLoop
+
+    ; Check if on head tile was an apple?
+    ; Or check if the next tile to which head is moving is an apple?
     cp a, APPLE_TILE_ID
     jp z, EatApple
     jp DontEatApple
@@ -919,9 +928,28 @@ GetTileByPixel:
     ret
 
 ; @param a: tile ID
+; @return z: set if a is a snake body part.
+IsSnakeBodyTileId:
+    cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
+    ret z
+    cp a, SNAKE_BODY_VERTICAL_TILE_ID
+    ret z
+    cp a, SNAKE_BODY_LEFT_TO_TOP_TILE_ID
+    ret z
+    cp a, SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
+    ret z
+    cp a, SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
+    ret z
+    cp a, SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    ret
+
+; @param a: tile ID
 ; @return z: set if a is a wall.
-IsWallTile:
+IsWallTileId:
     ; TODO Use correct Tile IDs
+    ; TODO I dont have to check the edge tiles
+    ; because you can only go onto these if you
+    ; go on one of the other wall tiles before that
     cp a, $00
     ret z
     cp a, $01

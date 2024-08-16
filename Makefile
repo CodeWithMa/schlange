@@ -9,7 +9,7 @@ GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
 OUTPUT_GB = schlange.gb
 
 # Define object files and other intermediates
-OBJ_FILES = main.o
+OBJ_FILES = main.o input.o
 GFX_BACKGROUND_TILES = gfx/background.2bpp
 GFX_BACKGROUND_TILEMAP = gfx/background.tilemap
 GFX_SNAKE_HEAD = gfx/snake_head.2bpp
@@ -31,6 +31,9 @@ $(GFX_SNAKE_BODY): gfx/snake_body.png
 
 $(GFX_APPLE): gfx/apple.png
 	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_APPLE) $<
+
+input.o: input.asm
+	$(RGBASM) -o $@ $<
 
 # Assemble main assembly file
 main.o: main.asm $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD) $(GFX_SNAKE_BODY) $(GFX_APPLE)

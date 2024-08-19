@@ -381,10 +381,10 @@ MoveSnakePosition:
 
     ; If it is on a snake body tile the game is over
     call IsSnakeBodyTileId
-    jp z, DebugLoop
+    jp z, EntryPoint
     ; If it is on a wall the game is over
     call IsWallTileId
-    jp z, DebugLoop
+    jp z, EntryPoint
 
     ; Check if on head tile was an apple?
     ; Or check if the next tile to which head is moving is an apple?
@@ -901,6 +901,14 @@ IsSnakeBodyTileId:
     cp a, SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
     ret z
     cp a, SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
+    ret z
+    cp a, SNAKE_TAIL_LEFT_TILE_ID
+    ret z
+    cp a, SNAKE_TAIL_RIGHT_TILE_ID
+    ret z
+    cp a, SNAKE_TAIL_DOWN_TILE_ID
+    ret z
+    cp a, SNAKE_TAIL_UP_TILE_ID
     ret
 
 ; @param a: tile ID

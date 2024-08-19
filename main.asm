@@ -56,10 +56,20 @@ SECTION "Header", ROM0[$100]
 
 EntryPoint:
     ; Do not turn the LCD off outside of VBlank
-WaitVBlank:
-    ld a, [rLY]
-    cp 144
-    jp c, WaitVBlank
+    call WaitVBlank
+
+    ; Turn the LCD off
+    ld a, 0
+    ld [rLCDC], a
+
+    ; Load and show title screen
+    ; This call will return when
+    ; the start button was pressed
+    call ShowTitleScreen
+
+    ; StartGame
+
+    call WaitVBlank
 
     ; Turn the LCD off
     ld a, 0
@@ -105,15 +115,7 @@ WaitVBlank:
     ld [hli], a
     ld [hli], a
 
-
-    ; ClearOam
-    ld a, 0
-    ld b, 160
-    ld hl, _OAMRAM
-ClearOam:
-    ld [hli], a
-    dec b
-    jp nz, ClearOam
+    call ClearOam
 
     ; Once OAM is clear, we can draw an object by writing its properties.
     ; Initialize the snake head sprite in OAM
@@ -162,13 +164,7 @@ ClearOam:
     ld [wSnakeSpeed], a
 
 Main:
-    ld a, [rLY]
-    cp 144
-    jp nc, Main
-WaitVBlank2:
-    ld a, [rLY]
-    cp 144
-    jp c, WaitVBlank2
+    call WaitForBeginningOfVBlank
 
     call MoveSnakePosition
 
@@ -929,18 +925,15 @@ IsWallTileId:
     cp a, $07
     ret
 
-; Copy bytes from one area to another.
-; @param de: Source
-; @param hl: Destination
-; @param bc: Length
-Memcopy:
-    ld a, [de]
+ClearOam:
+    ; ClearOam
+    ld a, 0
+    ld b, 160
+    ld hl, _OAMRAM
+ClearOamLoop:
     ld [hli], a
-    inc de
-    dec bc
-    ld a, b
-    or a, c
-    jp nz, Memcopy
+    dec b
+    jp nz, ClearOamLoop
     ret
 
 BackgroundTiles: INCBIN "gfx/background.2bpp"

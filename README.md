@@ -28,3 +28,13 @@ This will generate `schlange.gb`.
 
 - `main.asm`: Main game logic.
 - `gfx/`: Folder containing PNG images and converted `.2bpp` files for graphics.
+
+## Links
+
+- [https://rgbds.gbdev.io/docs/v0.8.0/gbz80.7](https://rgbds.gbdev.io/docs/v0.8.0/gbz80.7)
+- [https://evie.gbdev.io/blog/interrupts.html](https://evie.gbdev.io/blog/interrupts.html)
+- [https://gbdev.io/gb-asm-tutorial/index.html](https://gbdev.io/gb-asm-tutorial/index.html)
+- [https://gbdev.io/pandocs](https://gbdev.io/pandocs)
+- [https://github.com/gbdev/rgbds](https://github.com/gbdev/rgbds)
+- [https://mgba.io/](https://mgba.io/)
+- [https://sameboy.github.io/](https://sameboy.github.io/)

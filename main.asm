@@ -914,21 +914,14 @@ IsSnakeBodyTileId:
 ; @param a: tile ID
 ; @return z: set if a is a wall.
 IsWallTileId:
-    ; TODO Use correct Tile IDs
-    ; TODO I dont have to check the edge tiles
+    ; I dont have to check the edge tiles
     ; because you can only go onto these if you
     ; go on one of the other wall tiles before that
-    cp a, $00
-    ret z
     cp a, $01
-    ret z
-    cp a, $02
     ret z
     cp a, $04
     ret z
     cp a, $05
-    ret z
-    cp a, $06
     ret z
     cp a, $07
     ret

@@ -1,4 +1,4 @@
 *.2bpp
 *.gb
 *.o
-*.tilemap
+gfx/title_screen.tilemap

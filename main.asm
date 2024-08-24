@@ -7,29 +7,38 @@ DEF OBJECT_OFFSET_Y EQU 16
 
 DEF TILE_SIZE EQU 8
 
+; OAM tiles
 ; Head tiles
 DEF SNAKE_HEAD_LEFT_TILE_ID EQU 0
 DEF SNAKE_HEAD_RIGHT_TILE_ID EQU 1
 DEF SNAKE_HEAD_DOWN_TILE_ID EQU 2
 DEF SNAKE_HEAD_UP_TILE_ID EQU 3
 
+; Background tiles
+DEF EMPTY_TILE_ID EQU 0
+
+; Wall tiles
+DEF TOP_WALL_TILE_ID EQU 2
+DEF LEFT_WALL_TILE_ID EQU 4
+DEF RIGHT_WALL_TILE_ID EQU 5
+DEF BOTTOM_WALL_TILE_ID EQU 7
+
 ; Body tiles
-DEF EMPTY_TILE_ID EQU 9 + 4
 DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
 DEF SNAKE_BODY_VERTICAL_TILE_ID EQU 9 + 3
-DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 5
+DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 4
 DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU 9 + 0
-DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 6
+DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 5
 DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU 9 + 2
 
 ; Tail tiles
-DEF SNAKE_TAIL_LEFT_TILE_ID EQU 9 + 7
-DEF SNAKE_TAIL_RIGHT_TILE_ID EQU 9 + 8
-DEF SNAKE_TAIL_DOWN_TILE_ID EQU 9 + 9
-DEF SNAKE_TAIL_UP_TILE_ID EQU 9 + 10
+DEF SNAKE_TAIL_LEFT_TILE_ID EQU 9 + 6
+DEF SNAKE_TAIL_RIGHT_TILE_ID EQU 9 + 7
+DEF SNAKE_TAIL_DOWN_TILE_ID EQU 9 + 8
+DEF SNAKE_TAIL_UP_TILE_ID EQU 9 + 9
 
 ; Apple tile
-DEF APPLE_TILE_ID EQU 9 + 11
+DEF APPLE_TILE_ID EQU 9 + 10
 
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
@@ -87,18 +96,6 @@ EntryPoint:
     ld de, BackgroundTiles
     ld hl, _VRAM9000
     ld bc, BackgroundTilesEnd - BackgroundTiles
-    call Memcopy
-
-    ; SnakeBodyData
-    ld de, SnakeBodyData
-    ld hl, _VRAM9000 + BackgroundTilesEnd - BackgroundTiles
-    ld bc, SnakeBodyDataEnd - SnakeBodyData
-    call Memcopy
-
-    ; AppleData
-    ld de, AppleData
-    ld hl, _VRAM9000 + BackgroundTilesEnd - BackgroundTiles + SnakeBodyDataEnd - SnakeBodyData
-    ld bc, AppleDataEnd - AppleData
     call Memcopy
 
     ; Load Background tilemap
@@ -406,6 +403,7 @@ EatApple:
     inc hl
     call MoveArrayItemsLoop
     call MoveHeadPosition
+    call SpawnNewApple
     ret
 
 DontEatApple:
@@ -428,6 +426,10 @@ MoveHeadPositionSkip:
 
 ; Add the snake's momentum to its position in OAM.
 MoveHeadPosition:
+    ; Wait for VBlank so we can modify values in OAM
+    ; If the snake gets too long this is needed or the
+    ; head will not move
+    call WaitVBlank
     ; CheckAndMoveLeft
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
@@ -488,7 +490,7 @@ MoveHeadPositionEnd:
     ld a, [wSnakeDirection]
     ld [wPreviousSnakeDirection], a
     ret
-    
+
 ; Method to move the snake's position
 ; @param a: the amount to move the position by (can be positive or negative)
 ; @param hl: the address of the position to modify (SNAKE_HEAD_POS_X_ADDRESS or SNAKE_HEAD_POS_Y_ADDRESS)
@@ -515,24 +517,64 @@ MoveSnakeBody:
 DebugLoop:
     jp DebugLoop
 
-; ; Checks if a brick was collided with and breaks it if possible.
-; ; @param hl: address of tile.
-; CheckAndHandleBrick:
-;     ld a, [hl]
-;     cp a, BRICK_LEFT
-;     jr nz, CheckAndHandleBrickRight
-;     ; Break a brick from the left side.
-;     ld [hl], BLANK_TILE
-;     inc hl
-;     ld [hl], BLANK_TILE
-; CheckAndHandleBrickRight:
-;     cp a, BRICK_RIGHT
-;     ret nz
-;     ; Break a brick from the right side.
-;     ld [hl], BLANK_TILE
-;     dec hl
-;     ld [hl], BLANK_TILE
-;     ret
+SpawnNewApple:
+    call GetRandomEmptyTileAddress
+
+    ; set background tile to apple
+    ld [hl], APPLE_TILE_ID
+    ret
+
+; Get a random empty tile address
+; @return hl: tile address
+GetRandomEmptyTileAddress:
+    call GetRandomTileAddress
+    ; hl is the new random background tile address
+
+    ; Check if tile is empty
+    ld a, [hl]
+    cp a, EMPTY_TILE_ID
+    ret z
+
+    ; If tile is not empty generate a new random tile
+    jr GetRandomEmptyTileAddress
+    ret
+
+; Get a random tile address
+; @return hl: tile address
+GetRandomTileAddress:
+    ; first empty tile address is $9821
+    ; add random number to it
+    ld a, 0
+    ld b, a
+    ld a, [wRandomSeed]
+    ld c, a
+    ld hl, $9821
+    add hl, bc
+
+    ; This loads the value from the Game Boy's Divider Register (rDIV) into the A register.
+    ; The Divider Register is a timer that's constantly incrementing at 16384Hz when the Game Boy is running.
+    ; Its value is essentially unpredictable at any given moment, making it a good source of randomness.
+    ld b, a
+    ld a, [rDIV]
+    add a, b
+
+    ld [wRandomSeed], a
+
+    ; adding 8 bit is not enough to reach the end
+    ; of the playing field so add every odd frame
+    ; an additional amount to reach the end
+    and a, 1
+    jr z, AddMoreEnd
+
+AddMore:
+    ld a, 0
+    ld b, a
+    ld a, 242
+    ld c, a
+    add hl, bc
+
+AddMoreEnd:
+    ret
 
 ; Get the tilemap address of the background tile
 ; on which the snake head currently is
@@ -580,8 +622,6 @@ AddBodyPartItem:
 ; @param bc: contains the address in the tilemap
 SetEmptyBackgroundTileToLastPosition:
     ld a, EMPTY_TILE_ID
-    ; TODO For testing: This sets the last tile to snake body vertiaal
-    ;ld a, SNAKE_BODY_VERTICAL_TILE_ID
     ld [bc], a
     ret
 
@@ -917,13 +957,13 @@ IsWallTileId:
     ; I dont have to check the edge tiles
     ; because you can only go onto these if you
     ; go on one of the other wall tiles before that
-    cp a, $01
+    cp a, TOP_WALL_TILE_ID
     ret z
-    cp a, $04
+    cp a, LEFT_WALL_TILE_ID
     ret z
-    cp a, $05
+    cp a, RIGHT_WALL_TILE_ID
     ret z
-    cp a, $07
+    cp a, BOTTOM_WALL_TILE_ID
     ret
 
 ClearOam:
@@ -943,12 +983,6 @@ BackgroundTilesEnd:
 BackgroundTilemap: INCBIN "gfx/background.tilemap"
 BackgroundTilemapEnd:
 
-SnakeBodyData: INCBIN "gfx/snake_body.2bpp"
-SnakeBodyDataEnd:
-
-AppleData: INCBIN "gfx/apple.2bpp"
-AppleDataEnd:
-
 SnakeHeadData: INCBIN "gfx/snake_head.2bpp"
 SnakeHeadDataEnd:
 
@@ -956,6 +990,9 @@ SnakeHeadDataEnd:
 
 SECTION "Counter", WRAM0
 wFrameCounter: db
+
+SECTION "Random Seed", WRAM0
+wRandomSeed: db
 
 SECTION "Snake Head Direction", WRAM0
 wSnakeDirection: db

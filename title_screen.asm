@@ -20,7 +20,9 @@ LoadTitleScreen:
 
     ; Put in function?
     ; Turn the LCD on
-    ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
+    ; TODO turn objon if start screen has object in the future
+    ;ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
+    ld a, LCDCF_ON | LCDCF_BGON
     ld [rLCDC], a
 
     ; Put in function?

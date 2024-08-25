@@ -18,7 +18,6 @@ jobs:
     name: "Dev Build Release"
     runs-on: ubuntu-latest
     steps:
-steps:
       # INSTALL DEPENDENCIES
       - id: apt-get-depends
         name: "Install build dependencies"

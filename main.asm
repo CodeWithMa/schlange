@@ -153,6 +153,7 @@ EntryPoint:
     ; Initialize global variables
     ld a, 0
     ld [wFrameCounter], a
+    ld [wApplesCounter], a
     ld [wCurKeys], a
     ld [wNewKeys], a
     
@@ -404,6 +405,7 @@ EatApple:
     call MoveArrayItemsLoop
     call MoveHeadPosition
     call SpawnNewApple
+    call IncreaseSnakeSpeedIfAteEnoughApples
     ret
 
 DontEatApple:
@@ -573,6 +575,29 @@ AddMore:
     add hl, bc
 
 AddMoreEnd:
+    ret
+
+; Increase speed by 2 every 10 apples
+IncreaseSnakeSpeedIfAteEnoughApples:
+    ; Increase apple counter
+    ld a, [wApplesCounter]
+    inc a
+    ld [wApplesCounter], a
+
+    ; return if not 10 apples
+    cp a, 10
+    ret nz
+
+    ; reset apple counter to 0
+    ld a, 0
+    ld [wApplesCounter], a
+
+    ; increase speed
+    ld a, [wSnakeSpeed]
+    sub a, 2
+    ; Return if result is zero - This happens if we are at full speed
+    ret z
+    ld [wSnakeSpeed], a
     ret
 
 ; Get the tilemap address of the background tile
@@ -999,6 +1024,9 @@ wPreviousSnakeDirection: db
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db
+
+SECTION "Apples Counter", WRAM0
+wApplesCounter: db
 
 ; 20*18 = 360 possible tile positions
 ; Contains the addresses of the tiles in the tilemap on which a body part is

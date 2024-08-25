@@ -537,7 +537,6 @@ GetRandomEmptyTileAddress:
 
     ; If tile is not empty generate a new random tile
     jr GetRandomEmptyTileAddress
-    ret
 
 ; Get a random tile address
 ; @return hl: tile address

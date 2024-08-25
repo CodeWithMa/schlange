@@ -1,8 +1,8 @@
 # Define paths and tools
-RGBGFX = $(RGBDS)/rgbgfx
-RGBASM = $(RGBDS)/rgbasm
-RGBLINK = $(RGBDS)/rgblink
-RGBFIX = $(RGBDS)/rgbfix
+RGBGFX = $(RGBDS)rgbgfx
+RGBASM = $(RGBDS)rgbasm
+RGBLINK = $(RGBDS)rgblink
+RGBFIX = $(RGBDS)rgbfix
 
 RGBASM_WARN = -Weverything -Wnumeric-string=2 -Wtruncation=1
 

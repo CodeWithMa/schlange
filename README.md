@@ -8,6 +8,10 @@ This repository contains the source code and assets for "Schlange", a Game Boy g
 - Custom graphics with unique tiles for the snake and background.
 - Built with assembly language for authentic retro hardware.
 
+## Download
+
+Download the [latest dev build](https://github.com/CodeWithMa/schlange/releases/tag/v0.0.0-latest) to get the very latest ROM, up-to-date with the dev branch.
+
 ## Requirements
 
 - [RGBDS](https://github.com/gbdev/rgbds) toolchain installed and accessible in your system path.

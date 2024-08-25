@@ -1,0 +1,87 @@
+# Dev Build
+name: "Dev Build"
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  NIGHTLY_TAG: "v0.0.0-latest"
+  NIGHTLY_NAME: "0.0.0-latest"
+  NIGHTLY_BODY: |
+    This is the latest schlange release build from the latest commit.
+  RGBDS_VERSION: "v0.8.0"
+
+jobs:
+  release:
+    name: "Dev Build Release"
+    runs-on: ubuntu-latest
+    steps:
+steps:
+      # INSTALL DEPENDENCIES
+      - id: apt-get-depends
+        name: "Install build dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install bison gcc git make -y;
+
+      # CHECKOUT RGBDS
+      - id: checkout-rgbds
+        name: "Checkout gbdev/rgbds"
+        uses: actions/checkout@v3
+        with:
+          path: rgbds
+          ref: ${{ env.RGBDS_VERSION }}
+          repository: gbdev/rgbds
+
+      # INSTALL RGBDS
+      - id: install-rgbds
+        name: "Install gbdev/rgbds"
+        working-directory: rgbds
+        run: |
+          sudo make install
+
+      # CHECKOUT REPOSITORY
+      - id: checkout-schlange
+        name: "Checkout CodeWithMa/schlange"
+        uses: actions/checkout@v3
+
+      # BUILD ROMS
+      - id: build-schlange
+        name: "Build schlange"
+        run: |
+          make
+
+      # DELETE OLD RELEASE
+      - name: Delete old release
+        id: delete_release
+        uses: cb80/delrel@latest
+        with:
+          tag: ${{ env.NIGHTLY_TAG }}
+
+      # ADVANCE NIGHTLY TAG TO MASTER
+      - name: Advance nightly tag to master
+        run: |
+          git tag ${{ env.NIGHTLY_TAG }} -f
+          git push --tags -f "https://CodeWithMa:$GITHUB_TOKEN@github.com/CodeWithMa/schlange.git"
+
+      # CREATE NEW RELEASE
+      - name: Create new release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.NIGHTLY_TAG }}
+          name: ${{ env.NIGHTLY_NAME }}
+          body: ${{ env.NIGHTLY_BODY }}
+          draft: false
+          prerelease: true
+
+      # UPLOAD ROM
+      - name: Upload schlange.gb
+        id: upload
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.NIGHTLY_TAG }}
+          files: |
+            ./schlange.gb

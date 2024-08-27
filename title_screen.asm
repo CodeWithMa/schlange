@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "font.inc"
 
 DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9928
 DEF ROW_SIZE EQU $20
@@ -59,15 +60,8 @@ WaitInTitleScreen:
 
 LoadTitleScreenTiles:
     ld de, TitleScreenTiles
-    ld hl, _VRAM9000
+    ld hl, _VRAM9000 + FONT_TILES_SIZE
     ld bc, TITLE_SCREEN_TILES_SIZE
-    call Memcopy
-    ret
-
-LoadFontTiles:
-    ld de, FontTiles
-    ld hl, _VRAM9000 + TITLE_SCREEN_TILES_SIZE
-    ld bc, FONT_TILES_SIZE
     call Memcopy
     ret
 
@@ -75,7 +69,7 @@ LoadTitleScreenTilemap:
     ld de, TitleScreenTilemap
     ld hl, _SCRN0
     ld bc, TitleScreenTilemapEnd - TitleScreenTilemap
-    call Memcopy
+    call MemcopyWithFontOffset
     ret
 
 ; Draws text to the background
@@ -96,28 +90,10 @@ TitleScreenTiles: INCBIN "gfx/title_screen.2bpp"
 TitleScreenTilesEnd:
 DEF TITLE_SCREEN_TILES_SIZE EQU TitleScreenTilesEnd - TitleScreenTiles
 DEF TITLE_SCREEN_NUMBER_OF_TILES EQU TITLE_SCREEN_TILES_SIZE / 16
+STATIC_ASSERT FONT_NUMBER_OF_TILES + TITLE_SCREEN_NUMBER_OF_TILES < 129, "Number of total background tiles is too large!"
 
 TitleScreenTilemap: INCBIN "gfx/title_screen.tilemap"
 TitleScreenTilemapEnd:
-
-; TODO create extra asm file for font related code?
-FontTiles: INCBIN "gfx/font.2bpp"
-FontTilesEnd:
-DEF FONT_TILES_SIZE EQU FontTilesEnd - FontTiles
-DEF FONT_NUMBER_OF_TILES EQU FONT_TILES_SIZE / 16
-STATIC_ASSERT FONT_NUMBER_OF_TILES == 34, "Number of font tiles is wrong!"
-STATIC_ASSERT TITLE_SCREEN_NUMBER_OF_TILES + FONT_NUMBER_OF_TILES < 129, "Number of total background tiles is too large!"
-
-CHARMAP "A", TITLE_SCREEN_NUMBER_OF_TILES + 0
-CHARMAP "B", TITLE_SCREEN_NUMBER_OF_TILES + 1
-CHARMAP "C", TITLE_SCREEN_NUMBER_OF_TILES + 2
-CHARMAP "D", TITLE_SCREEN_NUMBER_OF_TILES + 3
-CHARMAP "O", TITLE_SCREEN_NUMBER_OF_TILES + 14
-CHARMAP "P", TITLE_SCREEN_NUMBER_OF_TILES + 15
-CHARMAP "Q", TITLE_SCREEN_NUMBER_OF_TILES + 16
-CHARMAP "R", TITLE_SCREEN_NUMBER_OF_TILES + 17
-CHARMAP "S", TITLE_SCREEN_NUMBER_OF_TILES + 18
-CHARMAP "T", TITLE_SCREEN_NUMBER_OF_TILES + 19
 
 StartText: db "START", 255
 TodoText: db "TODO", 255

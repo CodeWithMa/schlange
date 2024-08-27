@@ -11,7 +11,7 @@ GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
 ROM_NAME = schlange
 
 # Define object files and other intermediates
-OBJ_FILES = main.o input.o title_screen.o util/memory.o util/vblank.o
+OBJ_FILES = font.o input.o main.o title_screen.o util/memory.o util/vblank.o
 GFX_BACKGROUND_TILES = gfx/background.2bpp
 GFX_BACKGROUND_TILEMAP = gfx/background.tilemap
 GFX_FONT_TILES = gfx/font.2bpp
@@ -35,10 +35,13 @@ $(GFX_TITLE_SCREEN_TILES): gfx/title_screen.png
 $(GFX_SNAKE_HEAD): gfx/snake_head.png
 	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_SNAKE_HEAD) $<
 
+font.o: font.asm $(GFX_FONT_TILES)
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
 input.o: input.asm
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-title_screen.o: title_screen.asm $(GFX_FONT_TILES) $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
+title_screen.o: title_screen.asm $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 util/memory.o: util/memory.asm

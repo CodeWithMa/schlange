@@ -56,11 +56,11 @@ main.o: main.asm $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_H
 
 # Link object file to create the ROM
 $(ROM_NAME).gb: $(OBJ_FILES)
-	$(RGBLINK) -n $(ROM_NAME).sym -m $(ROM_NAME).map -o $(ROM_NAME).gb $(OBJ_FILES)
+	$(RGBLINK) -m $(ROM_NAME).map -n $(ROM_NAME).sym -o $(ROM_NAME).gb $(OBJ_FILES)
 	$(RGBFIX) -t "SCHLANGE" -v -p 0xFF $(ROM_NAME).gb
 
 # Clean up build artifacts
 clean:
-	rm -f $(OBJ_FILES) $(ROM_NAME).gb $(GFX_BACKGROUND_TILES) $(GFX_FONT_TILES) $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP) $(GFX_SNAKE_HEAD)
+	rm -f $(OBJ_FILES) $(ROM_NAME).gb $(ROM_NAME).map $(ROM_NAME).sym $(GFX_BACKGROUND_TILES) $(GFX_FONT_TILES) $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP) $(GFX_SNAKE_HEAD)
 
 .PHONY: all clean

@@ -10,6 +10,12 @@ DEF MENU_MAX_INDEX EQU 2
 SECTION "Title Screen", ROM0
 
 ShowTitleScreen::
+    ; Do not turn the LCD off outside of VBlank
+    call WaitVBlank
+
+    ; Turn the LCD off
+    ld a, 0
+    ld [rLCDC], a
 
     ; Initialize variables
     ld a, 0
@@ -59,15 +65,21 @@ WaitInTitleScreen:
     cp 144
     jp nc, WaitInTitleScreen
 
-    ; TODO Do I need this wait?
     call WaitVBlank
 
     call UpdateKeys
 
-    ; Check start button
+    ; Check a button
     ; TODO Check selected menu item
     ld a, [wCurKeys]
-    and a, PADF_START
+    and a, PADF_A
+    ; TODO Returning from here does not work with a menu
+    ; from which user can select. 
+    ; previous i was just waiting to return to the main.asm
+    ; and then start the game...
+    ; Code in main should be extracted into ingame.asm or something that
+    ; only handles the playing state
+    ; main.asm should then manage between the states
     ret nz
 
     ; Check up or down to move cursor

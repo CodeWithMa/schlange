@@ -92,13 +92,12 @@ InitializeGame:
     ld bc, BackgroundTilemapEnd - BackgroundTilemap
     call Memcopy
 
-    ; For testing set static apple
-    ; TODO Place it on a random tile that is not the snake
-    ld hl, _SCRN0 + 200
+    ; Spawn 3 random apples
+REPT 3
+    call GetRandomEmptyTileAddress
     ld a, APPLE_TILE_ID
-    ld [hli], a
-    ld [hli], a
-    ld [hli], a
+    ld [hl], a
+ENDR    
 
     call ClearOam
 

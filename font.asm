@@ -15,3 +15,17 @@ LoadFontTiles::
     ld bc, FONT_TILES_SIZE
     call Memcopy
     ret
+
+; Draws text to the background
+; @param de: Address to start drawing the tiles on
+; @param hl: Address to the start of the text to draw
+DrawTextTiles::
+    ; Stop at the end of the string
+    ld a, [hli]
+    cp 255
+    ret z
+
+    ld [de], a
+    inc de
+
+    jp DrawTextTiles

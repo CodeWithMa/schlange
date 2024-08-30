@@ -5,6 +5,7 @@ DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9928
 DEF ROW_SIZE EQU $20
 DEF CURSOR_TILE_ID EQU 52
 
+DEF MENU_MIN_INDEX EQU 0
 DEF MENU_MAX_INDEX EQU 2
 
 SECTION "Title Screen", ROM0
@@ -13,9 +14,7 @@ ShowTitleScreen::
     ; Do not turn the LCD off outside of VBlank
     call WaitVBlank
 
-    ; Turn the LCD off
-    ld a, 0
-    ld [rLCDC], a
+    call TurnLcdOff
 
     ; Initialize variables
     ld a, 0
@@ -33,20 +32,16 @@ ShowTitleScreen::
 
     ; Write second menu text to background
     ld de, FIRST_MENU_TEXT_START_ADDRESS + ROW_SIZE
-    ld hl, TodoText
+    ld hl, HighscoreText
     call DrawTextTiles
 
-    ; Write second menu text to background
+    ; Write third menu text to background
     ld de, FIRST_MENU_TEXT_START_ADDRESS + ROW_SIZE * 2
     ld hl, TodoText
     call DrawTextTiles
 
-    ; Put in function?
-    ; Turn the LCD on
     ; TODO turn objon if start screen has object in the future
-    ;ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
-    ld a, LCDCF_ON | LCDCF_BGON
-    ld [rLCDC], a
+    call TurnLcdOnNoObj
 
     ; Put in function?
     ; During the first (blank) frame, initialize display registers
@@ -69,17 +64,9 @@ WaitInTitleScreen:
 
     call UpdateKeys
 
-    ; Check a button
-    ; TODO Check selected menu item
-    ld a, [wCurKeys]
+    ; Return if the A button is pressed
+    ld a, [wNewKeys]
     and a, PADF_A
-    ; TODO Returning from here does not work with a menu
-    ; from which user can select. 
-    ; previous i was just waiting to return to the main.asm
-    ; and then start the game...
-    ; Code in main should be extracted into ingame.asm or something that
-    ; only handles the playing state
-    ; main.asm should then manage between the states
     ret nz
 
     ; Check up or down to move cursor
@@ -101,20 +88,6 @@ LoadTitleScreenTilemap:
     call MemcopyWithFontOffset
     ret
 
-; Draws text to the background
-; @param de: Address to start drawing the tiles on
-; @param hl: Address to the start of the text to draw
-DrawTextTiles:
-    ; Stop at the end of the string
-    ld a, [hli]
-    cp 255
-    ret z
-
-    ld [de], a
-    inc de
-
-    jp DrawTextTiles
-
 MoveMenuCursor:
     ld a, [wNewKeys]
 
@@ -130,7 +103,7 @@ MoveMenuCursorUp:
     ld a, [wSelectedMenuItem]
     
     ; return if the first item is selected
-    cp a, 0
+    cp a, MENU_MIN_INDEX
     ret z
 
     ; save new index
@@ -206,7 +179,8 @@ TitleScreenTilemap: INCBIN "gfx/title_screen.tilemap"
 TitleScreenTilemapEnd:
 
 StartText: db "START", 255
+HighscoreText: db "HIGHSCORE", 255
 TodoText: db "TODO", 255
 
 SECTION "Selected Menu Item", WRAM0
-wSelectedMenuItem: db
+wSelectedMenuItem:: db

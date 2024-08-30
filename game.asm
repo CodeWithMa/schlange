@@ -70,9 +70,7 @@ StartGame::
 InitializeGame:
     call WaitVBlank
 
-    ; Turn the LCD off
-    ld a, 0
-    ld [rLCDC], a
+    call TurnLcdOff
 
     ; Load tiles
 
@@ -129,9 +127,7 @@ InitializeGame:
     ; turned on
     call InitializeSnakeBody
 
-    ; Turn the LCD on
-    ld a, LCDCF_ON | LCDCF_BGON | LCDCF_OBJON
-    ld [rLCDC], a
+    call TurnLcdOn
 
     ; During the first (blank) frame, initialize display registers
     ; Set Palettes

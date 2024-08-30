@@ -11,7 +11,7 @@ GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
 ROM_NAME = schlange
 
 # Define object files and other intermediates
-OBJ_FILES = font.o game.o input.o main.o title_screen.o util/memory.o util/oam.o util/random.o util/screen.o util/vblank.o
+OBJ_FILES = font.o game.o highscore.o input.o main.o title_screen.o util/lcd.o util/memory.o util/oam.o util/random.o util/screen.o util/vblank.o
 GFX_BACKGROUND_TILES = gfx/background.2bpp
 GFX_BACKGROUND_TILEMAP = gfx/background.tilemap
 GFX_FONT_TILES = gfx/font.2bpp
@@ -35,16 +35,22 @@ $(GFX_TITLE_SCREEN_TILES): gfx/title_screen.png
 $(GFX_SNAKE_HEAD): gfx/snake_head.png
 	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_SNAKE_HEAD) $<
 
-font.o: font.asm $(GFX_FONT_TILES)
+font.o: font.asm font.inc $(GFX_FONT_TILES)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 game.o: game.asm $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
+highscore.o: highscore.asm font.inc
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
 input.o: input.asm
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-title_screen.o: title_screen.asm $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
+title_screen.o: title_screen.asm font.inc $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
+util/lcd.o: util/lcd.asm
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 util/memory.o: util/memory.asm

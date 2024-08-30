@@ -1,5 +1,8 @@
 INCLUDE "hardware.inc"
 
+DEF START_GAME_MENU_INDEX EQU 0
+DEF HIGHSCORE_MENU_INDEX EQU 1
+
 SECTION "Header", ROM0[$100]
     jp EntryPoint
     ds $150 - @, 0 ; Make room for the header
@@ -9,12 +12,26 @@ EntryPoint:
 Main:
     ; Load and show title screen
     ; This call will return when
-    ; the start button was pressed
+    ; a menu item was selected
     call ShowTitleScreen
 
-    ; TODO What do I do after starting the game?
-    call StartGame
+    ; Check what menu item was selected
+    ld a, [wSelectedMenuItem]
 
+    cp a, START_GAME_MENU_INDEX
+    jp z, CallStartGame
+
+    cp a, HIGHSCORE_MENU_INDEX
+    jp z, CallShowHighscore
+
+    jp Main
+
+CallStartGame:
+    call StartGame
+    jp Main
+
+CallShowHighscore:
+    call ShowHighscore
     jp Main
 
 ; Extract in utils

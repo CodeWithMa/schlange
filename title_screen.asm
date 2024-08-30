@@ -1,7 +1,7 @@
 INCLUDE "hardware.inc"
 INCLUDE "font.inc"
 
-DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9928
+DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9926
 DEF ROW_SIZE EQU $20
 DEF CURSOR_TILE_ID EQU 52
 
@@ -39,6 +39,10 @@ ShowTitleScreen::
     ld de, FIRST_MENU_TEXT_START_ADDRESS + ROW_SIZE * 2
     ld hl, TodoText
     call DrawTextTiles
+
+    ; Draw cursor at index 0
+    ld a, 0
+    call DrawCursorAtMenuIndex
 
     ; TODO turn objon if start screen has object in the future
     call TurnLcdOnNoObj

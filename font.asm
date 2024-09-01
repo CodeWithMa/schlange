@@ -29,3 +29,17 @@ DrawTextTiles::
     inc de
 
     jp DrawTextTiles
+
+ClearScreen0::
+    ld hl, _SCRN0
+    ld bc, _SCRN1 - _SCRN0 ; Size of one screen
+:
+    ld a, FONT_EMPTY_TILE_ID
+    ld [hli], a
+
+    dec bc
+    ld a, b
+    or a, c
+    jp nz, :-
+
+    ret

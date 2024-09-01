@@ -2,6 +2,7 @@ INCLUDE "hardware.inc"
 
 DEF START_GAME_MENU_INDEX EQU 0
 DEF HIGHSCORE_MENU_INDEX EQU 1
+DEF CREDITS_MENU_INDEX EQU 2
 
 SECTION "Header", ROM0[$100]
     jp EntryPoint
@@ -24,6 +25,9 @@ Main:
     cp a, HIGHSCORE_MENU_INDEX
     jp z, CallShowHighscore
 
+    cp a, CREDITS_MENU_INDEX
+    jp z, CallShowCredits
+
     jp Main
 
 CallStartGame:
@@ -32,6 +36,10 @@ CallStartGame:
 
 CallShowHighscore:
     call ShowHighscore
+    jp Main
+
+CallShowCredits:
+    call ShowCredits
     jp Main
 
 ; Extract in utils

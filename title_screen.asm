@@ -3,7 +3,7 @@ INCLUDE "font.inc"
 
 DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9926
 DEF ROW_SIZE EQU $20
-DEF CURSOR_TILE_ID EQU 52
+DEF CURSOR_TILE_ID EQU FONT_NUMBER_OF_TILES + 18
 
 DEF MENU_MIN_INDEX EQU 0
 DEF MENU_MAX_INDEX EQU 2
@@ -37,7 +37,7 @@ ShowTitleScreen::
 
     ; Write third menu text to background
     ld de, FIRST_MENU_TEXT_START_ADDRESS + ROW_SIZE * 2
-    ld hl, TodoText
+    ld hl, CreditsText
     call DrawTextTiles
 
     ; Draw cursor at index 0
@@ -184,7 +184,7 @@ TitleScreenTilemapEnd:
 
 StartText: db "START", 255
 HighscoreText: db "HIGHSCORE", 255
-TodoText: db "TODO", 255
+CreditsText: db "CREDITS", 255
 
 SECTION "Selected Menu Item", WRAM0
 wSelectedMenuItem:: db

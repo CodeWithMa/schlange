@@ -15,9 +15,8 @@ ShowHighscore::
     ; Initialize variables
 
     ; Load tiles and tilemap
-    ;call LoadHighScoreTiles
     call LoadFontTiles
-    call LoadHighScoreTilemap
+    call ClearScreen0
 
     ; Write text to background
     ld de, TEXT_START_ADDRESS
@@ -66,33 +65,6 @@ WaitInHighscoreScreen:
     ret nz
 
     jp WaitInHighscoreScreen
-
-; LoadHighScoreTiles:
-;     ld de, HighScoreTiles
-;     ld hl, _VRAM9000 + FONT_TILES_SIZE
-;     ld bc, HIGHSCORE_TILES_SIZE
-;     call Memcopy
-;     ret
-
-LoadHighScoreTilemap:
-    ; ld de, HighScoreTilemap
-    ; ld hl, _SCRN0
-    ; ld bc, HighScoreTilemapEnd - HighScoreTilemap
-    ; call MemcopyWithFontOffset
-
-    ; For now clear the whole screen
-    ld hl, _SCRN0
-    ld bc, _SCRN1 - _SCRN0 ; Size of one screen
-:
-    ld a, FONT_EMPTY_TILE_ID
-    ld [hli], a
-
-    dec bc
-    ld a, b
-    or a, c
-    jp nz, :-
-
-    ret
 
 HighscoreText: db "HIGHSCORE", 255
 TodoText: db "TODO", 255

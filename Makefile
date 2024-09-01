@@ -11,7 +11,7 @@ GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
 ROM_NAME = schlange
 
 # Define object files and other intermediates
-OBJ_FILES = font.o game.o highscore.o input.o main.o title_screen.o util/lcd.o util/memory.o util/oam.o util/random.o util/screen.o util/vblank.o
+OBJ_FILES = credits.o font.o game.o highscore.o input.o main.o title_screen.o util/lcd.o util/memory.o util/oam.o util/random.o util/screen.o util/vblank.o
 GFX_BACKGROUND_TILES = gfx/background.2bpp
 GFX_BACKGROUND_TILEMAP = gfx/background.tilemap
 GFX_FONT_TILES = gfx/font.2bpp
@@ -35,6 +35,9 @@ $(GFX_TITLE_SCREEN_TILES): gfx/title_screen.png
 $(GFX_SNAKE_HEAD): gfx/snake_head.png
 	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_SNAKE_HEAD) $<
 
+credits.o: credits.asm font.inc $(GFX_FONT_TILES)
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
 font.o: font.asm font.inc $(GFX_FONT_TILES)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
@@ -53,7 +56,7 @@ title_screen.o: title_screen.asm font.inc $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_
 util/lcd.o: util/lcd.asm
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-util/memory.o: util/memory.asm
+util/memory.o: util/memory.asm font.inc
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 util/oam.o: util/oam.asm

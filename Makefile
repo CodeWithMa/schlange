@@ -41,7 +41,7 @@ credits.o: credits.asm font.inc $(GFX_FONT_TILES)
 font.o: font.asm font.inc $(GFX_FONT_TILES)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-game.o: game.asm $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
+game.o: game.asm font.inc $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 highscore.o: highscore.asm font.inc

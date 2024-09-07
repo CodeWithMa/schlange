@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "font.inc"
 
 ; Constants
 
@@ -16,30 +17,30 @@ DEF SNAKE_HEAD_DOWN_TILE_ID EQU 2
 DEF SNAKE_HEAD_UP_TILE_ID EQU 3
 
 ; Background tiles
-DEF EMPTY_TILE_ID EQU 0
+DEF EMPTY_TILE_ID EQU FONT_NUMBER_OF_TILES + 0
 
 ; Wall tiles
-DEF TOP_WALL_TILE_ID EQU 2
-DEF LEFT_WALL_TILE_ID EQU 4
-DEF RIGHT_WALL_TILE_ID EQU 5
-DEF BOTTOM_WALL_TILE_ID EQU 7
+DEF TOP_WALL_TILE_ID EQU FONT_NUMBER_OF_TILES + 2
+DEF LEFT_WALL_TILE_ID EQU FONT_NUMBER_OF_TILES + 4
+DEF RIGHT_WALL_TILE_ID EQU FONT_NUMBER_OF_TILES + 5
+DEF BOTTOM_WALL_TILE_ID EQU FONT_NUMBER_OF_TILES + 7
 
 ; Body tiles
-DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU 9 + 1
-DEF SNAKE_BODY_VERTICAL_TILE_ID EQU 9 + 3
-DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU 9 + 4
-DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU 9 + 0
-DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU 9 + 5
-DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU 9 + 2
+DEF SNAKE_BODY_HORIZONTAL_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 1
+DEF SNAKE_BODY_VERTICAL_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 3
+DEF SNAKE_BODY_LEFT_TO_TOP_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 4
+DEF SNAKE_BODY_LEFT_TO_DOWN_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 0
+DEF SNAKE_BODY_RIGHT_TO_TOP_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 5
+DEF SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 2
 
 ; Tail tiles
-DEF SNAKE_TAIL_LEFT_TILE_ID EQU 9 + 6
-DEF SNAKE_TAIL_RIGHT_TILE_ID EQU 9 + 7
-DEF SNAKE_TAIL_DOWN_TILE_ID EQU 9 + 8
-DEF SNAKE_TAIL_UP_TILE_ID EQU 9 + 9
+DEF SNAKE_TAIL_LEFT_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 6
+DEF SNAKE_TAIL_RIGHT_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 7
+DEF SNAKE_TAIL_DOWN_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 8
+DEF SNAKE_TAIL_UP_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 9
 
 ; Apple tile
-DEF APPLE_TILE_ID EQU 9 + 10
+DEF APPLE_TILE_ID EQU FONT_NUMBER_OF_TILES + 9 + 10
 
 ; The snake starts in the middle
 DEF SNAKE_START_POS_X EQU 10
@@ -59,6 +60,11 @@ DEF SNAKE_HEAD_POS_X_ADDRESS EQU _OAMRAM + 1
 DEF SNAKE_HEAD_POS_Y_ADDRESS EQU _OAMRAM
 ; Address in which the Tile ID of the snake head is saved
 DEF SNAKE_HEAD_TILE_ID_ADDRESS EQU _OAMRAM + 2
+
+; Tile addresses where the score will be displayed
+DEF SCORE_TILE_1_ADDRESS EQU _SCRN0 + 10
+DEF SCORE_TILE_2_ADDRESS EQU _SCRN0 + 9
+DEF SCORE_TILE_3_ADDRESS EQU _SCRN0 + 8
 
 SECTION "Game", ROM0
 
@@ -81,8 +87,13 @@ InitializeGame:
     call Memcopy
 
     ; Background Tiles
+
+    ; Load Font
+    call LoadFontNumberTilesInOrder
+
+    ; Wall tiles etc
     ld de, BackgroundTiles
-    ld hl, _VRAM9000
+    ld hl, _VRAM9000 + FONT_TILES_SIZE
     ld bc, BackgroundTilesEnd - BackgroundTiles
     call Memcopy
 
@@ -90,7 +101,14 @@ InitializeGame:
     ld de, BackgroundTilemap
     ld hl, _SCRN0
     ld bc, BackgroundTilemapEnd - BackgroundTilemap
-    call Memcopy
+    call MemcopyWithFontOffset
+
+    ; Load initial score after the background is loaded
+    ld hl, SCORE_TILE_3_ADDRESS
+    ld a, 0
+    ld [hli], a
+    ld [hli], a
+    ld [hli], a
 
     ; Spawn 3 random apples
 REPT 3
@@ -284,6 +302,8 @@ MoveSnakePosition:
     call IsWallTileId
     jp z, SetGameOver
 
+    ; TODO Add check if snake is on score characters -> game over
+
     jp SetGameOverEnd
 
 SetGameOver:
@@ -315,6 +335,7 @@ EatApple:
     call MoveHeadPosition
     call SpawnNewApple
     call IncreaseSnakeSpeedIfAteEnoughApples
+    call UpdateDisplayScore
     ret
 
 DontEatApple:
@@ -467,6 +488,38 @@ IncreaseSnakeSpeedIfAteEnoughApples:
     ; Return if result is zero - This happens if we are at full speed
     ret z
     ld [wSnakeSpeed], a
+    ret
+
+UpdateDisplayScore:
+    ld a, [wApplesCounter]
+    ld hl, SCORE_TILE_1_ADDRESS
+    ld [hl], a
+
+    ; If counter is 0 then add 1 to next digit
+    cp a, 0
+    jp z, :+
+    ret
+:
+    ld hl, SCORE_TILE_2_ADDRESS
+    ld a, [hl]
+
+    ; Check if value is 9 -> update third digit
+    cp a, 9
+    jp z, .UpdateThirdDigit
+    jp .UpdateSecondDigit
+
+.UpdateThirdDigit:
+    ; Set second to 0
+    ld a, 0
+    ld [hld], a
+    ld a, [hl]
+    inc a
+    ld [hl], a
+    ret
+
+.UpdateSecondDigit:
+    inc a
+    ld [hl], a
     ret
 
 ; Get the tilemap address of the background tile
@@ -849,6 +902,8 @@ SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db
 
 SECTION "Apples Counter", WRAM0
+; Counter for apples. Resets to 0 after collecting 10 apples
+; and increasing the speed.
 wApplesCounter: db
 
 SECTION "Game Over", WRAM0

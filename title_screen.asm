@@ -56,7 +56,6 @@ ShowTitleScreen::
     ld [rOBP0], a
 
 WaitInTitleScreen:
-    ; TODO Wait for start button press
     ; TODO Use interrupts
     ; and halt. in interupt set variable to check
     ; if main loop should go to load the game

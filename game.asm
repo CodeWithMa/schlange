@@ -1,13 +1,8 @@
 INCLUDE "hardware.inc"
 INCLUDE "font.inc"
+INCLUDE "util/hardware_extensions.inc"
 
 ; Constants
-
-; TODO Move these to utils.inc or objects.inc?
-DEF OBJECT_OFFSET_X EQU 8
-DEF OBJECT_OFFSET_Y EQU 16
-
-DEF TILE_SIZE EQU 8
 
 ; OAM tiles
 ; Head tiles
@@ -521,11 +516,11 @@ UpdateDisplayScore:
 GetSnakeHeadTileAddress:
     ld a, [SNAKE_HEAD_POS_X_ADDRESS]
     ; Offset 8 because object position top left corner is not (0,0)
-    sub a, OBJECT_OFFSET_X
+    sub a, OAM_X_OFS
     ld b, a
     ld a, [SNAKE_HEAD_POS_Y_ADDRESS]
     ; Offset 16 because object position top left corner is not (0,0)
-    sub a, OBJECT_OFFSET_Y
+    sub a, OAM_Y_OFS
     ld c, a
     call GetTileByPixel
     ret

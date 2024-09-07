@@ -38,10 +38,10 @@ $(GFX_SNAKE_HEAD): gfx/snake_head.png
 credits.o: credits.asm font.inc $(GFX_FONT_TILES)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-font.o: font.asm font.inc $(GFX_FONT_TILES)
+font.o: font.asm font.inc util/hardware_extensions.inc $(GFX_FONT_TILES)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
-game.o: game.asm font.inc $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
+game.o: game.asm font.inc util/hardware_extensions.inc $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 highscore.o: highscore.asm font.inc

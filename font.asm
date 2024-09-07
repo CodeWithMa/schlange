@@ -1,8 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "font.inc"
-
-; TODO move in utils.inc?
-DEF TILE_DATA_SIZE EQU 16
+INCLUDE "util/hardware_extensions.inc"
 
 SECTION "Font", ROM0
 

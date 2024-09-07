@@ -294,17 +294,10 @@ MoveSnakePosition:
     call GetSnakeHeadTileAddress
     ld a, [hl]
 
-    ; If it is on a snake body tile the game is over
-    call IsSnakeBodyTileId
-    jp z, SetGameOver
-
-    ; If it is on a wall the game is over
-    call IsWallTileId
-    jp z, SetGameOver
-
-    ; TODO Add check if snake is on score characters -> game over
-
-    jp SetGameOverEnd
+    ; Only check if the head is on an allowed tile else game over
+    call IsAllowedTileId
+    jp z, SetGameOverEnd
+    jp SetGameOver
 
 SetGameOver:
     ld a, 1
@@ -842,42 +835,11 @@ MoveArrayItemsLoopEnd:
     ret
 
 ; @param a: tile ID
-; @return z: set if a is a snake body part.
-IsSnakeBodyTileId:
-    cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
+; @return z: set if a is an allowed tile to be on
+IsAllowedTileId:
+    cp a, EMPTY_TILE_ID
     ret z
-    cp a, SNAKE_BODY_VERTICAL_TILE_ID
-    ret z
-    cp a, SNAKE_BODY_LEFT_TO_TOP_TILE_ID
-    ret z
-    cp a, SNAKE_BODY_LEFT_TO_DOWN_TILE_ID
-    ret z
-    cp a, SNAKE_BODY_RIGHT_TO_TOP_TILE_ID
-    ret z
-    cp a, SNAKE_BODY_RIGHT_TO_DOWN_TILE_ID
-    ret z
-    cp a, SNAKE_TAIL_LEFT_TILE_ID
-    ret z
-    cp a, SNAKE_TAIL_RIGHT_TILE_ID
-    ret z
-    cp a, SNAKE_TAIL_DOWN_TILE_ID
-    ret z
-    cp a, SNAKE_TAIL_UP_TILE_ID
-    ret
-
-; @param a: tile ID
-; @return z: set if a is a wall.
-IsWallTileId:
-    ; I dont have to check the edge tiles
-    ; because you can only go onto these if you
-    ; go on one of the other wall tiles before that
-    cp a, TOP_WALL_TILE_ID
-    ret z
-    cp a, LEFT_WALL_TILE_ID
-    ret z
-    cp a, RIGHT_WALL_TILE_ID
-    ret z
-    cp a, BOTTOM_WALL_TILE_ID
+    cp a, APPLE_TILE_ID
     ret
 
 BackgroundTiles: INCBIN "gfx/background.2bpp"

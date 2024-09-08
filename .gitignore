@@ -3,4 +3,4 @@
 *.map
 *.o
 *.sym
-gfx/title_screen.tilemap
+src/gfx/title_screen.tilemap

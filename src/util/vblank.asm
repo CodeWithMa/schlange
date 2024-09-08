@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc/hardware.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
 
 SECTION "VBlank Utils", ROM0
 

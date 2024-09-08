@@ -1,5 +1,5 @@
-INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "font.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
+INCLUDE "src/font.inc"
 
 DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9926
 DEF ROW_SIZE EQU $20
@@ -172,13 +172,13 @@ CalculateMenuAddressAtIndex:
 
     ret
 
-TitleScreenTiles: INCBIN "gfx/title_screen.2bpp"
+TitleScreenTiles: INCBIN "src/gfx/title_screen.2bpp"
 TitleScreenTilesEnd:
 DEF TITLE_SCREEN_TILES_SIZE EQU TitleScreenTilesEnd - TitleScreenTiles
 DEF TITLE_SCREEN_NUMBER_OF_TILES EQU TITLE_SCREEN_TILES_SIZE / 16
 STATIC_ASSERT FONT_NUMBER_OF_TILES + TITLE_SCREEN_NUMBER_OF_TILES < 129, "Number of total background tiles is too large!"
 
-TitleScreenTilemap: INCBIN "gfx/title_screen.tilemap"
+TitleScreenTilemap: INCBIN "src/gfx/title_screen.tilemap"
 TitleScreenTilemapEnd:
 
 StartText: db "START", 255

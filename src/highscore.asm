@@ -1,5 +1,5 @@
-INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "font.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
+INCLUDE "src/font.inc"
 
 DEF TEXT_START_ADDRESS EQU $9821
 DEF ROW_SIZE EQU $20

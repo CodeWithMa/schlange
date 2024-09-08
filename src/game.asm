@@ -1,6 +1,6 @@
-INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "font.inc"
-INCLUDE "util/hardware_extensions.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
+INCLUDE "src/font.inc"
+INCLUDE "src/util/hardware_extensions.inc"
 
 ; Constants
 
@@ -837,13 +837,13 @@ IsAllowedTileId:
     cp a, APPLE_TILE_ID
     ret
 
-BackgroundTiles: INCBIN "gfx/background.2bpp"
+BackgroundTiles: INCBIN "src/gfx/background.2bpp"
 BackgroundTilesEnd:
 
-BackgroundTilemap: INCBIN "gfx/background.tilemap"
+BackgroundTilemap: INCBIN "src/gfx/background.tilemap"
 BackgroundTilemapEnd:
 
-SnakeHeadData: INCBIN "gfx/snake_head.2bpp"
+SnakeHeadData: INCBIN "src/gfx/snake_head.2bpp"
 SnakeHeadDataEnd:
 
 ; WRAM

@@ -1,10 +1,10 @@
-INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "font.inc"
-INCLUDE "util/hardware_extensions.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
+INCLUDE "src/font.inc"
+INCLUDE "src/util/hardware_extensions.inc"
 
 SECTION "Font", ROM0
 
-FontTiles: INCBIN "gfx/font.2bpp"
+FontTiles: INCBIN "src/gfx/font.2bpp"
 FontTilesEnd:
 
 DEF FONT_TILES_SIZE_CALCULATED EQU FontTilesEnd - FontTiles

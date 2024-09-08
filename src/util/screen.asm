@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc/hardware.inc"
+INCLUDE "src/hardware.inc/hardware.inc"
 
 SECTION "Screen Utils", ROM0
 

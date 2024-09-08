@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 
 DEF START_GAME_MENU_INDEX EQU 0
 DEF HIGHSCORE_MENU_INDEX EQU 1

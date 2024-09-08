@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "font.inc"
 
 DEF TEXT_START_ADDRESS EQU $9821

@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "font.inc"
 INCLUDE "util/hardware_extensions.inc"
 

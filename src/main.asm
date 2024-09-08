@@ -34,6 +34,8 @@ EntryPoint:
     ; enable interrupts
     ei
 
+    call SetupFortissimo
+
 Main:
     ; Load and show title screen
     ; This call will return when
@@ -65,6 +67,22 @@ CallShowHighscore:
 CallShowCredits:
     call ShowCredits
     jp Main
+
+SetupFortissimo:
+    call SetupFortissimo
+    ; You must do this at least once during game startup.
+	xor a
+	ldh [hUGE_MutedChannels], a
+
+	; Turn on the APU, and set the panning & volume to reasonable defaults.
+	ld a, AUDENA_ON
+	ldh [rNR52], a
+	ld a, $FF
+	ldh [rNR51], a
+	ld a, $77
+	ldh [rNR50], a
+    
+    ret
 
 ; Extract in utils
 DebugLoop::

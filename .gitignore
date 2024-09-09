@@ -3,4 +3,5 @@
 *.map
 *.o
 *.sym
+obj/
 src/gfx/title_screen.tilemap

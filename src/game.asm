@@ -837,13 +837,13 @@ IsAllowedTileId:
     cp a, APPLE_TILE_ID
     ret
 
-BackgroundTiles: INCBIN "src/gfx/background.2bpp"
+BackgroundTiles: INCBIN "obj/gfx/background.2bpp"
 BackgroundTilesEnd:
 
 BackgroundTilemap: INCBIN "src/gfx/background.tilemap"
 BackgroundTilemapEnd:
 
-SnakeHeadData: INCBIN "src/gfx/snake_head.2bpp"
+SnakeHeadData: INCBIN "obj/gfx/snake_head.2bpp"
 SnakeHeadDataEnd:
 
 ; WRAM

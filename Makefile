@@ -1,8 +1,8 @@
 # Define paths and tools
-RGBGFX = $(RGBDS)rgbgfx
-RGBASM = $(RGBDS)rgbasm
+RGBGFX  = $(RGBDS)rgbgfx
+RGBASM  = $(RGBDS)rgbasm
 RGBLINK = $(RGBDS)rgblink
-RGBFIX = $(RGBDS)rgbfix
+RGBFIX  = $(RGBDS)rgbfix
 
 RGBASM_WARN = -Weverything -Wnumeric-string=2 -Wtruncation=1
 
@@ -10,90 +10,70 @@ RGBASM_WARN = -Weverything -Wnumeric-string=2 -Wtruncation=1
 GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
 ROM_NAME = schlange
 
-# Define object files and other intermediates
-OBJ_FILES = obj/credits.o obj/font.o obj/game.o obj/highscore.o obj/input.o obj/main.o obj/title_screen.o obj/util/lcd.o obj/util/memory.o obj/util/oam.o obj/util/random.o obj/util/screen.o obj/util/vblank.o
-GFX_BACKGROUND_TILES = src/gfx/background.2bpp
-GFX_BACKGROUND_TILEMAP = src/gfx/background.tilemap
-GFX_FONT_TILES = src/gfx/font.2bpp
-GFX_TITLE_SCREEN_TILES = src/gfx/title_screen.2bpp
-GFX_TITLE_SCREEN_TILEMAP = src/gfx/title_screen.tilemap
-GFX_SNAKE_HEAD = src/gfx/snake_head.2bpp
+# Directories
+OBJ_DIR = obj
+UTIL_DIR = $(OBJ_DIR)/util
+SRC_DIR = src
+GFX_SRC_DIR = $(SRC_DIR)/gfx
+GFX_OBJ_DIR = $(OBJ_DIR)/gfx
+
+# Object files
+OBJ_FILES = \
+	$(OBJ_DIR)/credits.o \
+	$(OBJ_DIR)/font.o \
+	$(OBJ_DIR)/game.o \
+	$(OBJ_DIR)/highscore.o \
+	$(OBJ_DIR)/input.o \
+	$(OBJ_DIR)/main.o \
+	$(UTIL_DIR)/lcd.o \
+	$(UTIL_DIR)/memory.o \
+	$(UTIL_DIR)/oam.o \
+	$(UTIL_DIR)/random.o \
+	$(UTIL_DIR)/screen.o \
+	$(UTIL_DIR)/vblank.o \
+	$(OBJ_DIR)/title_screen.o
+
+# Graphics files
+GFX_BACKGROUND_TILES = $(GFX_OBJ_DIR)/background.2bpp
+GFX_FONT_TILES = $(GFX_OBJ_DIR)/font.2bpp
+GFX_TITLE_SCREEN_TILES = $(GFX_OBJ_DIR)/title_screen.2bpp
+GFX_TITLE_SCREEN_TILEMAP = $(GFX_OBJ_DIR)/title_screen.tilemap
+GFX_SNAKE_HEAD = $(GFX_OBJ_DIR)/snake_head.2bpp
 
 # Default target
-all: $(ROM_NAME).gb
+all: dirs $(ROM_NAME).gb
+
+# Create necessary directories
+dirs:
+	@mkdir -p $(OBJ_DIR) $(UTIL_DIR) $(GFX_OBJ_DIR)
+
+# Pattern rule for assembling object files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
+$(UTIL_DIR)/%.o: $(SRC_DIR)/util/%.asm
+	$(RGBASM) $(RGBASM_WARN) -o $@ $<
 
 # Convert graphics to 2bpp format
-$(GFX_BACKGROUND_TILES): src/gfx/background.png
-	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_BACKGROUND_TILES) --unique-tiles $<
+$(GFX_OBJ_DIR)/%.2bpp: $(GFX_SRC_DIR)/%.png
+	$(RGBGFX) -c $(GB_PALETTE) -o $@ --unique-tiles $<
 
-$(GFX_FONT_TILES): src/gfx/font.png
-	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_FONT_TILES) --unique-tiles $<
+# Special cases for tilemaps
+$(GFX_OBJ_DIR)/title_screen.2bpp: $(GFX_SRC_DIR)/title_screen.png
+	$(RGBGFX) -c $(GB_PALETTE) -o $@ --tilemap $(GFX_OBJ_DIR)/title_screen.tilemap --unique-tiles $<
 
-$(GFX_TITLE_SCREEN_TILES): src/gfx/title_screen.png
-	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_TITLE_SCREEN_TILES) --tilemap $(GFX_TITLE_SCREEN_TILEMAP) --unique-tiles $<
+# Add dependencies for graphics before assembling object files
+$(OBJ_DIR)/font.o: $(SRC_DIR)/font.asm $(GFX_FONT_TILES)
+$(OBJ_DIR)/game.o: $(SRC_DIR)/game.asm $(GFX_BACKGROUND_TILES) $(GFX_SNAKE_HEAD)
+$(OBJ_DIR)/title_screen.o: $(SRC_DIR)/title_screen.asm $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
 
-$(GFX_SNAKE_HEAD): src/gfx/snake_head.png
-	$(RGBGFX) -c $(GB_PALETTE) -o $(GFX_SNAKE_HEAD) $<
-
-obj/credits.o: src/credits.asm src/font.inc $(GFX_FONT_TILES)
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/font.o: src/font.asm src/font.inc src/util/hardware_extensions.inc $(GFX_FONT_TILES)
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/game.o: src/game.asm src/font.inc src/util/hardware_extensions.inc $(GFX_BACKGROUND_TILES) $(GFX_BACKGROUND_TILEMAP) $(GFX_SNAKE_HEAD)
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/highscore.o: src/highscore.asm src/font.inc
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/input.o: src/input.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/title_screen.o: src/title_screen.asm src/font.inc $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP)
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/lcd.o: src/util/lcd.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/memory.o: src/util/memory.asm src/font.inc
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/oam.o: src/util/oam.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/random.o: src/util/random.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/screen.o: src/util/screen.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/util/vblank.o: src/util/vblank.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-obj/main.o: src/main.asm
-	@mkdir -p ${@D}
-	$(RGBASM) $(RGBASM_WARN) -o $@ $<
-
-# Link object file to create the ROM
+# Link object files to create the ROM
 $(ROM_NAME).gb: $(OBJ_FILES)
-	$(RGBLINK) -m $(ROM_NAME).map -n $(ROM_NAME).sym -o $(ROM_NAME).gb $(OBJ_FILES)
-	$(RGBFIX) -t "SCHLANGE" -v -p 0xFF $(ROM_NAME).gb
+	$(RGBLINK) -m $(ROM_NAME).map -n $(ROM_NAME).sym -o $@ $^
+	$(RGBFIX) -t "SCHLANGE" -v -p 0xFF $@
 
 # Clean up build artifacts
 clean:
-	rm -f $(OBJ_FILES) $(ROM_NAME).gb $(ROM_NAME).map $(ROM_NAME).sym $(GFX_BACKGROUND_TILES) $(GFX_FONT_TILES) $(GFX_TITLE_SCREEN_TILES) $(GFX_TITLE_SCREEN_TILEMAP) $(GFX_SNAKE_HEAD)
+	rm -r $(OBJ_DIR) $(ROM_NAME).gb $(ROM_NAME).map $(ROM_NAME).sym
 
-.PHONY: all clean
+.PHONY: all clean dirs

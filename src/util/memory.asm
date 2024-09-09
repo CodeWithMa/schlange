@@ -1,4 +1,4 @@
-INCLUDE "src/font.inc"
+INCLUDE "src/include/font.inc"
 
 SECTION "Memory Copy", ROM0
 

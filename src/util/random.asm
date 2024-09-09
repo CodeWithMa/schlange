@@ -1,4 +1,4 @@
-INCLUDE "src/hardware.inc/hardware.inc"
+INCLUDE "src/include/hardware.inc/hardware.inc"
 
 SECTION "Random Utils", ROM0
 

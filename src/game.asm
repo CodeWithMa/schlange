@@ -1,6 +1,6 @@
-INCLUDE "src/hardware.inc/hardware.inc"
-INCLUDE "src/font.inc"
-INCLUDE "src/util/hardware_extensions.inc"
+INCLUDE "src/include/hardware.inc/hardware.inc"
+INCLUDE "src/include/font.inc"
+INCLUDE "src/include/hardware_extensions.inc"
 
 ; Constants
 

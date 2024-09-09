@@ -1,5 +1,5 @@
-INCLUDE "src/hardware.inc/hardware.inc"
-INCLUDE "src/font.inc"
+INCLUDE "src/include/hardware.inc/hardware.inc"
+INCLUDE "src/include/font.inc"
 
 DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9926
 DEF ROW_SIZE EQU $20

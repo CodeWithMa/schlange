@@ -84,6 +84,8 @@ WaitInCreditsScreen:
 
     call WaitVBlank
 
+    call hUGE_TickSound
+
     call UpdateKeys
 
     ; Return if the A button is pressed

@@ -2,5 +2,5 @@
 	path = src/include/hardware.inc
 	url = https://github.com/gbdev/hardware.inc.git
 [submodule "fortISSimO"]
-	path = fortISSimO
+	path = src/fortISSimO
 	url = https://github.com/ISSOtm/fortISSimO.git

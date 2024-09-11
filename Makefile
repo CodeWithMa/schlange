@@ -21,6 +21,7 @@ GFX_OBJ_DIR = $(OBJ_DIR)/gfx
 OBJ_FILES = \
 	$(OBJ_DIR)/credits.o \
 	$(OBJ_DIR)/font.o \
+	$(OBJ_DIR)/fortISSimO.o \
 	$(OBJ_DIR)/game.o \
 	$(OBJ_DIR)/highscore.o \
 	$(OBJ_DIR)/input.o \
@@ -31,6 +32,7 @@ OBJ_FILES = \
 	$(UTIL_DIR)/random.o \
 	$(UTIL_DIR)/screen.o \
 	$(UTIL_DIR)/vblank.o \
+	$(OBJ_DIR)/song.o \
 	$(OBJ_DIR)/title_screen.o
 
 # Graphics files
@@ -53,6 +55,12 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm
 
 $(UTIL_DIR)/%.o: $(SRC_DIR)/util/%.asm
 	$(RGBASM) $(RGBASM_WARN) -o $@ $<
+
+$(OBJ_DIR)/fortISSimO.o: $(SRC_DIR)/fortISSimO/fortISSimO.asm
+	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
+
+$(OBJ_DIR)/song.o: $(OBJ_DIR)/song.asm
+	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
 
 # Convert graphics to 2bpp format
 $(GFX_OBJ_DIR)/%.2bpp: $(GFX_SRC_DIR)/%.png

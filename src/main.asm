@@ -69,7 +69,6 @@ CallShowCredits:
     jp Main
 
 SetupFortissimo:
-    call SetupFortissimo
     ; You must do this at least once during game startup.
 	xor a
 	ldh [hUGE_MutedChannels], a
@@ -81,7 +80,10 @@ SetupFortissimo:
 	ldh [rNR51], a
 	ld a, $77
 	ldh [rNR50], a
-    
+
+    ld de, MainSong ; This is the song descriptor that was passed to `teNOR`.
+	call hUGE_SelectSong
+
     ret
 
 ; Extract in utils

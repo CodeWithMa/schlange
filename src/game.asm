@@ -167,6 +167,8 @@ GameLoop:
     call WaitForVBlankInterrupt
     ;call WaitForBeginningOfVBlank
 
+    call hUGE_TickSound
+
     call MoveSnakePosition
 
     ; Return if game is over

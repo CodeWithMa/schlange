@@ -46,7 +46,8 @@ jobs:
       - id: checkout-schlange
         name: "Checkout CodeWithMa/schlange"
         uses: actions/checkout@v4
-        submodules: true
+        with:
+          submodules: true
 
       # BUILD ROMS
       - id: build-schlange

@@ -28,7 +28,7 @@ jobs:
       # CHECKOUT RGBDS
       - id: checkout-rgbds
         name: "Checkout gbdev/rgbds"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: rgbds
           ref: ${{ env.RGBDS_VERSION }}
@@ -42,9 +42,11 @@ jobs:
           sudo make install
 
       # CHECKOUT REPOSITORY
+      # WITH SUBMODULES
       - id: checkout-schlange
         name: "Checkout CodeWithMa/schlange"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        submodules: true
 
       # BUILD ROMS
       - id: build-schlange

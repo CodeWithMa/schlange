@@ -157,12 +157,15 @@ ENDR
     ld [wNewKeys], a
     
     ; Set Snake Speed to 60 -> Move once every second
-    ld a, 60
+    ld a, 30
     ld [wSnakeSpeed], a
     ret
 
 GameLoop:
-    call WaitForBeginningOfVBlank
+
+    ; TODO check and only continue if vblank interrupt was called
+    call WaitForVBlankInterrupt
+    ;call WaitForBeginningOfVBlank
 
     call MoveSnakePosition
 
@@ -273,13 +276,14 @@ InitializeSnakeBody:
     ret
 
 MoveSnakePosition:
-    ; Load framecounter and only make the snake move every 15 frames
+    ; Load framecounter and only make the snake move every x frames
     ld a, [wFrameCounter]
-    inc a
-    ld [wFrameCounter], a
     ld b, a
     ld a, [wSnakeSpeed]
     cp a, b ; Every x frames, run the following code
+    ; TODO Make sure this works. What happens if the framecounter gets
+    ; increased to more than the speed.
+    ; I have to check if it is greater or equal if yes then move snake
     jp nz, MoveHeadPositionSkip
     ; Reset the frame counter back to 0
     ld a, 0
@@ -349,7 +353,7 @@ MoveHeadPosition:
     ; Wait for VBlank so we can modify values in OAM
     ; If the snake gets too long this is needed or the
     ; head will not move
-    call WaitVBlank
+    call WaitForVBlankInterrupt
     ; CheckAndMoveLeft
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
@@ -472,7 +476,7 @@ IncreaseSnakeSpeedIfAteEnoughApples:
 
     ; increase speed
     ld a, [wSnakeSpeed]
-    sub a, 2
+    sub a, 3
     ; Return if result is zero - This happens if we are at full speed
     ret z
     ld [wSnakeSpeed], a
@@ -851,9 +855,6 @@ SnakeHeadDataEnd:
 SECTION "Snake Head Direction", WRAM0
 wSnakeDirection: db
 wPreviousSnakeDirection: db
-
-SECTION "Frame Counter", WRAM0
-wFrameCounter: db
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db

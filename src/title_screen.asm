@@ -63,7 +63,8 @@ WaitInTitleScreen:
     cp 144
     jp nc, WaitInTitleScreen
 
-    call WaitVBlank
+    ;call WaitVBlank
+    halt
 
     call UpdateKeys
 

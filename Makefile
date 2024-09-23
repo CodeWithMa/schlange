@@ -4,7 +4,7 @@ RGBASM  = $(RGBDS)rgbasm
 RGBLINK = $(RGBDS)rgblink
 RGBFIX  = $(RGBDS)rgbfix
 
-RGBASM_WARN = -Weverything -Wnumeric-string=2 -Wtruncation=1
+RGBASM_WARN = -Weverything -Wtruncation=1
 
 # Define files and settings
 GB_PALETTE = "\#FFFFFF,\#cfcfcf,\#686868,\#000000;"
@@ -32,7 +32,8 @@ OBJ_FILES = \
 	$(UTIL_DIR)/random.o \
 	$(UTIL_DIR)/screen.o \
 	$(UTIL_DIR)/vblank.o \
-	$(OBJ_DIR)/song.o \
+	$(OBJ_DIR)/astronomia.o \
+	$(OBJ_DIR)/ievan_polkka.o \
 	$(OBJ_DIR)/title_screen.o
 
 # Graphics files
@@ -59,7 +60,16 @@ $(UTIL_DIR)/%.o: $(SRC_DIR)/util/%.asm
 $(OBJ_DIR)/fortISSimO.o: $(SRC_DIR)/fortISSimO/fortISSimO.asm
 	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
 
-$(OBJ_DIR)/song.o: $(OBJ_DIR)/song.asm
+$(OBJ_DIR)/ievan_polkka.asm: $(SRC_DIR)/music/ievan_polkka.uge
+	./src/fortISSimO/target/release/teNOR $< $@ --section-type ROMX --section-name "Song Data Ievan Polkka" --song-descriptor IevanPolkkaSong
+
+$(OBJ_DIR)/astronomia.asm: $(SRC_DIR)/music/astronomia.uge
+	./src/fortISSimO/target/release/teNOR $< $@ --section-type ROMX --section-name "Song Data Astronomia" --song-descriptor AstronomiaSong
+
+$(OBJ_DIR)/ievan_polkka.o: $(OBJ_DIR)/ievan_polkka.asm
+	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
+
+$(OBJ_DIR)/astronomia.o: $(OBJ_DIR)/astronomia.asm
 	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
 
 # Convert graphics to 2bpp format

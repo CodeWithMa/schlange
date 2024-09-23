@@ -6,6 +6,14 @@ DEF CREDITS_MENU_INDEX EQU 2
 
 SECTION "VBlank Interrupt", ROM0[$0040]
 VBlankInterrupt:
+	push af
+	push bc
+	push de
+	push hl
+	jp VBlankHandler
+
+SECTION "VBlank Handler", ROM0
+VBlankHandler:
     ; set interrupt flag
     ld a, 1
     ld [wVBlankInterruptFlag], a
@@ -14,6 +22,16 @@ VBlankInterrupt:
     ld a, [wFrameCounter]
     inc a
     ld [wFrameCounter], a
+
+    call hUGE_TickSound
+
+    ;call UpdateKeys
+
+	; Now we just have to `pop` those registers and return!
+	pop hl
+	pop de
+	pop bc
+	pop af
 
 	reti
 
@@ -58,6 +76,7 @@ Main:
 
 CallStartGame:
     call StartGame
+    ; TODO Show Game Over Screen?
     jp Main
 
 CallShowHighscore:
@@ -81,7 +100,7 @@ SetupFortissimo:
 	ld a, $77
 	ldh [rNR50], a
 
-    ld de, MainSong ; This is the song descriptor that was passed to `teNOR`.
+    ld de, IevanPolkkaSong ; This is the song descriptor that was passed to `teNOR`.
 	call hUGE_SelectSong
 
     ret

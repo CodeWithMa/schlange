@@ -69,7 +69,7 @@ StartGame::
     ret
 
 InitializeGame:
-    call WaitVBlank
+    call WaitForVBlankInterrupt
 
     call TurnLcdOff
 
@@ -162,12 +162,9 @@ ENDR
     ret
 
 GameLoop:
-
     ; TODO check and only continue if vblank interrupt was called
     call WaitForVBlankInterrupt
     ;call WaitForBeginningOfVBlank
-
-    call hUGE_TickSound
 
     call MoveSnakePosition
 
@@ -176,7 +173,7 @@ GameLoop:
     cp a, 1
     ret z
 
-    ; Check the current keys every frame and move left or right.
+    ; Check the current keys every frame.
     call UpdateKeys
 
     call UpdateSnakeDirection
@@ -303,6 +300,11 @@ MoveSnakePosition:
 SetGameOver:
     ld a, 1
     ld [wIsGameOver], a
+
+    ; Game Over Song
+    ld de, AstronomiaSong ; This is the song descriptor that was passed to `teNOR`.
+	call hUGE_SelectSong
+
     ret
 
 SetGameOverEnd:
@@ -316,7 +318,6 @@ SetGameOverEnd:
 EatApple:
     ; Add one body part to snake
     call AddBodyPartItem
-
     call GetSnakeHeadTileAddress
     call SetBackgroundSnakeTile
     call SaveNewPositionToBodyArray
@@ -340,11 +341,15 @@ DontEatApple:
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_NONE
     jp z, MoveHeadPositionSkip
-
     call SetBackgroundSnakeTile
     call SaveNewPositionToBodyArray
+    
+    call WaitForVBlankInterrupt
     call LoadLastSnakeBodyPositionAddress
     call MoveSnakeBody
+
+    call WaitForVBlankInterrupt
+    
     call MoveHeadPosition
   
 MoveHeadPositionSkip:

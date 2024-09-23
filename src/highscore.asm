@@ -48,16 +48,7 @@ ShowHighscore::
     ld [rOBP0], a
 
 WaitInHighscoreScreen:
-    ; TODO Use interrupts
-    ; and halt. in interupt set variable to check
-    ; if main loop should go to load the game
-    ld a, [rLY]
-    cp 144
-    jp nc, WaitInHighscoreScreen
-
-    call WaitVBlank
-
-    call hUGE_TickSound
+    call WaitForVBlankInterrupt
 
     call UpdateKeys
 

@@ -3,6 +3,8 @@ INCLUDE "src/include/font.inc"
 INCLUDE "src/include/hardware_extensions.inc"
 
 ; Constants
+DEF FALSE EQU 0
+DEF TRUE EQU 1
 
 ; OAM tiles
 ; Head tiles
@@ -51,10 +53,7 @@ DEF SNAKE_MOVE_RIGHT EQU 3
 DEF SNAKE_MOVE_LEFT EQU 4
 
 ; Address in which snake head position is saved
-DEF SNAKE_HEAD_POS_X_ADDRESS EQU _OAMRAM + 1
 DEF SNAKE_HEAD_POS_Y_ADDRESS EQU _OAMRAM
-; Address in which the Tile ID of the snake head is saved
-DEF SNAKE_HEAD_TILE_ID_ADDRESS EQU _OAMRAM + 2
 
 ; Tile addresses where the score will be displayed
 DEF SCORE_TILE_1_ADDRESS EQU _SCRN0 + 10
@@ -116,17 +115,23 @@ ENDR
 
     ; Once OAM is clear, we can draw an object by writing its properties.
     ; Initialize the snake head sprite in OAM
-    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
+    ld hl, wSnakePositionY
     ld a, SNAKE_START_POS_Y * 8
     add a, 16 ; y offset to make it start at 0
-    ld [hli], a
+    ld [hl], a
+
+    ld hl, wSnakePositionX
     ld a, SNAKE_START_POS_X * 8
     add a, 8 ; x offset to make it start at 0
-    ld [hli], a
+    ld [hl], a
+
+    ld hl, wSnakeHeadTileId
     ld a, SNAKE_HEAD_RIGHT_TILE_ID
-    ld [hli], a
-    ld a, 0
-    ld [hli], a
+    ld [hl], a
+
+    ; TODO Why set 0 to the byte after tile id? For init? See docs on obj struct
+    ;ld a, 0
+    ;ld [hli], a
 
     ; Snake is not moving until first key press
     ld a, SNAKE_MOVE_NONE
@@ -155,6 +160,7 @@ ENDR
     ld [wIsGameOver], a
     ld [wCurKeys], a
     ld [wNewKeys], a
+    ld [wUpdateNextBody], a
     
     ; Set Snake Speed to 60 -> Move once every second
     ld a, 30
@@ -162,9 +168,16 @@ ENDR
     ret
 
 GameLoop:
-    ; TODO check and only continue if vblank interrupt was called
+    ; Only continue if vblank interrupt was called
     call WaitForVBlankInterrupt
-    ;call WaitForBeginningOfVBlank
+
+    ; TODO Maybe only do this inside MoveSnakePosition when
+    ; the snake moves? Now it updates the values every frame
+    ; even if the snake did not move
+    ; TODO But then it will only be updated after speed amount of frames
+    ; which means the display is one turn behind
+    call UpdateSnakeOam
+    call UpdateBackgroundSnakeTiles
 
     call MoveSnakePosition
 
@@ -175,7 +188,6 @@ GameLoop:
 
     ; Check the current keys every frame.
     call UpdateKeys
-
     call UpdateSnakeDirection
 
     jp GameLoop
@@ -244,8 +256,10 @@ Down:
 InitializeSnakeBody:
     ; set background tiles in tilemap
     ld hl, SNAKE_INITIAL_TAIL_ADDRESS
+    
     ld a, SNAKE_TAIL_LEFT_TILE_ID
     ld [hli], a
+    ld [wNextTailTileId], a
     ld a, SNAKE_BODY_HORIZONTAL_TILE_ID
     ld [hli], a
 
@@ -274,6 +288,54 @@ InitializeSnakeBody:
 
     ret
 
+; Method to update snake head position and snake head
+; tile id in OAM
+UpdateSnakeOam:
+    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
+    ld a, [wSnakePositionY]
+    ld [hli], a
+    ld a, [wSnakePositionX]
+    ld [hli], a
+    ld a, [wSnakeHeadTileId]
+    ld [hl], a
+    ret
+
+; Update the background tiles
+; Set background tile to body where the head was
+; Update background for tail
+; TODO Also check if apples was eaten -> do not update tail
+UpdateBackgroundSnakeTiles:
+    ; check if update should run
+    ; TODO Maybe this can be optimized and removed
+    ld a, [wUpdateNextBody]
+    cp a, FALSE
+    ret z
+
+    ; reset to false
+    ld a, FALSE
+    ld [wUpdateNextBody], a
+
+    ; load saved address in hl
+    ld a, [wNextBodyTileAddress]
+    ld h, a
+    ld a, [wNextBodyTileAddress + 1]
+    ld l, a
+
+    ; set next body tile
+    ld a, [wNextBodyTileId]
+    ld [hl], a
+
+    ; Update tail
+    ld a, [wNextTailTileAddress]
+    ld h, a
+    ld a, [wNextTailTileAddress + 1]
+    ld l, a
+
+    ld a, [wNextTailTileId]
+    ld [hl], a
+
+    ret
+
 MoveSnakePosition:
     ; Load framecounter and only make the snake move every x frames
     ld a, [wFrameCounter]
@@ -288,8 +350,16 @@ MoveSnakePosition:
     ld a, 0
     ld [wFrameCounter], a
 
+    ; Get address of tile the head is on
+    call GetSnakeHeadBackgroundTileAddress
+    
+    ; Save address on which the head was to wram
+    ld a, h
+    ld [wNextBodyTileAddress], a
+    ld a, l
+    ld [wNextBodyTileAddress + 1], a
+    
     ; Check what kind of tile the head is on
-    call GetSnakeHeadTileAddress
     ld a, [hl]
 
     ; Only check if the head is on an allowed tile else game over
@@ -318,7 +388,7 @@ SetGameOverEnd:
 EatApple:
     ; Add one body part to snake
     call AddBodyPartItem
-    call GetSnakeHeadTileAddress
+    call GetSnakeHeadBackgroundTileAddress
     call SetBackgroundSnakeTile
     call SaveNewPositionToBodyArray
     call LoadLastSnakeBodyPositionAddress
@@ -331,6 +401,13 @@ EatApple:
     call SpawnNewApple
     call IncreaseSnakeSpeedIfAteEnoughApples
     call UpdateDisplayScore
+
+    ; TODO Is this the best position?
+    ; Set flag to true so background will be updated
+    ; Make it a macro?
+    ld a, TRUE
+    ld [wUpdateNextBody], a
+
     ret
 
 DontEatApple:
@@ -341,26 +418,29 @@ DontEatApple:
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_NONE
     jp z, MoveHeadPositionSkip
+
+    ; Set flag to true so background will be updated
+    ld a, TRUE
+    ld [wUpdateNextBody], a
+
     call SetBackgroundSnakeTile
+
+    ; hl has to contain pos of last head address. load it
+    ; wNextBodyTileAddress -> hl
+    ld a, [wNextBodyTileAddress]
+    ld h, a
+    ld a, [wNextBodyTileAddress + 1]
+    ld l, a
     call SaveNewPositionToBodyArray
     
-    call WaitForVBlankInterrupt
-    call LoadLastSnakeBodyPositionAddress
     call MoveSnakeBody
-
-    call WaitForVBlankInterrupt
-    
     call MoveHeadPosition
-  
+
 MoveHeadPositionSkip:
     ret
 
 ; Add the snake's momentum to its position in OAM.
 MoveHeadPosition:
-    ; Wait for VBlank so we can modify values in OAM
-    ; If the snake gets too long this is needed or the
-    ; head will not move
-    call WaitForVBlankInterrupt
     ; CheckAndMoveLeft
     ld a, [wSnakeDirection]
     cp a, SNAKE_MOVE_LEFT
@@ -386,7 +466,7 @@ MoveHeadPosition:
 
 MoveLeft:
     ld a, -1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_X_ADDRESS
+    ld hl, wSnakePositionX
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_LEFT_TILE_ID
     call UpdateSnakeHeadTileId
@@ -394,7 +474,7 @@ MoveLeft:
 
 MoveRight:
     ld a, 1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_X_ADDRESS
+    ld hl, wSnakePositionX
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_RIGHT_TILE_ID
     call UpdateSnakeHeadTileId
@@ -402,7 +482,7 @@ MoveRight:
 
 MoveUp:
     ld a, -1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
+    ld hl, wSnakePositionY
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_UP_TILE_ID
     call UpdateSnakeHeadTileId
@@ -410,7 +490,7 @@ MoveUp:
 
 MoveDown:
     ld a, 1 * TILE_SIZE
-    ld hl, SNAKE_HEAD_POS_Y_ADDRESS
+    ld hl, wSnakePositionY
     call MoveSnakePositionByPixel
     ld a, SNAKE_HEAD_DOWN_TILE_ID
     call UpdateSnakeHeadTileId
@@ -434,7 +514,7 @@ MoveSnakePositionByPixel:
 
 ; @param a: the tile id to set
 UpdateSnakeHeadTileId:
-    ld hl, SNAKE_HEAD_TILE_ID_ADDRESS
+    ld hl, wSnakeHeadTileId
     ld [hl], a
     ret
 
@@ -524,12 +604,12 @@ UpdateDisplayScore:
 ; Get the tilemap address of the background tile
 ; on which the snake head currently is
 ; @return hl: tile address
-GetSnakeHeadTileAddress:
-    ld a, [SNAKE_HEAD_POS_X_ADDRESS]
+GetSnakeHeadBackgroundTileAddress:
+    ld a, [wSnakePositionX]
     ; Offset 8 because object position top left corner is not (0,0)
     sub a, OAM_X_OFS
     ld b, a
-    ld a, [SNAKE_HEAD_POS_Y_ADDRESS]
+    ld a, [wSnakePositionY]
     ; Offset 16 because object position top left corner is not (0,0)
     sub a, OAM_Y_OFS
     ld c, a
@@ -547,6 +627,7 @@ SaveAddressOfLastSnakeBodyPart:
 
 ; Load the last snake body position address into hl
 ; @return hl: address of last body position
+; trashes: a
 LoadLastSnakeBodyPositionAddress:
     ld a, [wSnakeLastBodyPositionAddress]
     ld h, a
@@ -580,6 +661,13 @@ ReadTileIdFromTileBeforeTail:
     dec hl
     ld b, [hl]
 
+    ; Save address to tile before tail,
+    ; which will become the new tail
+    ld a, b
+    ld [wNextTailTileAddress], a
+    ld a, c
+    ld [wNextTailTileAddress + 1], a
+
     ; Read tile id from tile before tail
     ld a, [bc]
 
@@ -587,18 +675,21 @@ ReadTileIdFromTileBeforeTail:
     inc hl
     inc hl
     inc hl
+
     ret
 
 ; @param hl: the address of the last snake body position
 SetNewSnakeTail:
-    ; Get address pointed to by hl
+    ; We need the address of the last body part in bc
+    ; to read the tile id before the tail
+    call LoadLastSnakeBodyPositionAddress
     ld b, [hl]
     inc hl
     ld c, [hl]
     ; bc contains address of last tile in tilemap
 
-    ; Check what tile id the tail on last tile is
-    ld a, [bc]
+    ; Load what tile id the tail has. It is called next, but always contains the current tail...
+    ld a, [wNextTailTileId]
     
     cp a, SNAKE_TAIL_LEFT_TILE_ID
     jp z, SnakeTailWasLeft
@@ -681,28 +772,32 @@ SnakeTailWasUp:
 
 SetLeftTail:
     ld a, SNAKE_TAIL_LEFT_TILE_ID
-    ld [bc], a
+    ld [wNextTailTileId], a
     ret
 
 SetRightTail:
     ld a, SNAKE_TAIL_RIGHT_TILE_ID
-    ld [bc], a
+    ld [wNextTailTileId], a
     ret
 
 SetDownTail:
     ld a, SNAKE_TAIL_DOWN_TILE_ID
-    ld [bc], a
+    ld [wNextTailTileId], a
     ret
 
 SetUpTail:
     ld a, SNAKE_TAIL_UP_TILE_ID
-    ld [bc], a
+    ld [wNextTailTileId], a
     ret
 
-; Set background on which the snake head is to
-; the correct next body tile id
-; @param hl: tilemap address of the background tile
+; Calculate which body tile is the correct one
+; to place on the background where the head was
+; depending on previous and current snake direction
+; The next body tile is then save to wNextBodyTileId
+; and set on the next vblank
 SetBackgroundSnakeTile:
+    ld hl, wNextBodyTileId
+
     ld a, [wPreviousSnakeDirection]
 
     cp a, SNAKE_MOVE_LEFT
@@ -862,6 +957,24 @@ SnakeHeadDataEnd:
 SECTION "Snake Head Direction", WRAM0
 wSnakeDirection: db
 wPreviousSnakeDirection: db
+
+; These are the same values as OAM
+; They will be synced every vblank
+SECTION "Snake Head Position", WRAM0
+wSnakePositionX: db
+wSnakePositionY: db
+wSnakeHeadTileId: db
+
+; These are updates to the background tiles
+; Also synced every vblank
+SECTION "Snake Body Updates", WRAM0
+wUpdateNextBody: db ; Bool: TRUE if background should be updated
+
+wNextBodyTileAddress: dw
+wNextBodyTileId: db
+
+wNextTailTileAddress: dw
+wNextTailTileId: db
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db

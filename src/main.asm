@@ -41,10 +41,11 @@ SECTION "Header", ROM0[$100]
 
 EntryPoint:
 
-    ; initialize variables
+    ; initialize global variables
     ld a, 0
     ld [wFrameCounter], a
     ld [wCurKeys], a
+    ld [wNewKeys], a
     
     ; enable the VBlank interrupt
     ld a, IEF_VBLANK

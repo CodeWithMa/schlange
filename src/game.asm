@@ -153,13 +153,10 @@ ENDR
     ld a, %11100100
     ld [rOBP0], a
 
-    ; Initialize global variables
+    ; Initialize variables
     ld a, 0
-    ld [wFrameCounter], a
     ld [wApplesCounter], a
     ld [wIsGameOver], a
-    ld [wCurKeys], a
-    ld [wNewKeys], a
     ld [wUpdateNextBody], a
     
     ; Set Snake Speed to 60 -> Move once every second
@@ -266,23 +263,29 @@ InitializeSnakeBody:
     ld bc, SNAKE_INITIAL_BODY_ADDRESS
 
     ; set first item in wSnakeBodyArray array
-    ; +2 because the first item is actually the second,
+    ; +3 because the first item is actually the second,
     ; first one is used for temporary setting the new position when moving
-    ld hl, wSnakeBodyArray + 2
+    DEF SNAKE_BODY_ARRAY_ITEM_SIZE EQU 3
+    ld hl, wSnakeBodyArray + SNAKE_BODY_ARRAY_ITEM_SIZE
     ld [hl], b
     inc hl
     ld [hl], c
-
-    ;ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
-    ld bc, SNAKE_INITIAL_TAIL_ADDRESS
+    inc hl
+    ld [hl], a ; 3rd byte is the tile id
 
     ; set second item in wSnakeBodyArray array
+    ld bc, SNAKE_INITIAL_TAIL_ADDRESS
+    ld a, SNAKE_TAIL_LEFT_TILE_ID
+
     inc hl
     ld [hl], b
     inc hl
     ld [hl], c
+    inc hl
+    ld [hl], a ; 3rd byte is the tile id
 
-    ; decrement by 1 to go to start of second item in array
+    ; decrement by 2 to go to start of second item in array
+    dec hl
     dec hl
     call SaveAddressOfLastSnakeBodyPart
 
@@ -334,6 +337,15 @@ UpdateBackgroundSnakeTiles:
     ld a, [wNextTailTileId]
     ld [hl], a
 
+    ; Remove previous tail tile
+    ld a, [wLastTailTileAddress]
+    ld h, a
+    ld a, [wLastTailTileAddress + 1]
+    ld l, a
+
+    ld a, EMPTY_TILE_ID
+    ld [hl], a
+
     ret
 
 MoveSnakePosition:
@@ -351,6 +363,8 @@ MoveSnakePosition:
     ld [wFrameCounter], a
 
     ; Get address of tile the head is on
+    ; TODO Instead of reading from vram i could save the background the head is on
+    ; each time the head moves to a new tile and then just load that value here
     call GetSnakeHeadBackgroundTileAddress
     
     ; Save address on which the head was to wram
@@ -618,6 +632,7 @@ GetSnakeHeadBackgroundTileAddress:
 
 ; Save the last snake body position address hl into wSnakeLastBodyPositionAddress
 ; @param hl: address of last body position
+; trashes: a
 SaveAddressOfLastSnakeBodyPart:
     ld a, h
     ld [wSnakeLastBodyPositionAddress], a
@@ -652,32 +667,40 @@ AddBodyPartItem:
     dec hl ; TODO Check if this is needed
     ret
 
-; Set empty background tile to last position
+; Save last position so I can set it to empty tile
+; when vblank happens
 ; @param bc: contains the address in the tilemap
-SetEmptyBackgroundTileToLastPosition:
-    ld a, EMPTY_TILE_ID
-    ld [bc], a
+SaveLastTailTileAddress:
+    ld a, b
+    ld [wLastTailTileAddress], a
+    ld a, c
+    ld [wLastTailTileAddress + 1], a
+
     ret
 
 ; @param hl: points to the last byte of tail
 ; @returns a: tile id of tile bofore tail
 ReadTileIdFromTileBeforeTail:
-    ; Put the address of the tile that is before the tail in bc
+    ; Put the value of the tile before the tail into a
     dec hl
     dec hl
-    ld c, [hl]
     dec hl
-    ld b, [hl]
+    ; hl now points at the value of the tile before the tail
+    dec hl
+    dec hl
+    ; now it points to the start of the item before
 
+    ; get the address of the body part before the tail
+    ; so it can be updated in vblank interrupt
     ; Save address to tile before tail,
     ; which will become the new tail
-    ld a, b
+    ld a, [hli]
     ld [wNextTailTileAddress], a
-    ld a, c
+    ld a, [hli]
     ld [wNextTailTileAddress + 1], a
 
     ; Read tile id from tile before tail
-    ld a, [bc]
+    ld a, [hl]
 
     ; undo changes to hl
     inc hl
@@ -688,6 +711,8 @@ ReadTileIdFromTileBeforeTail:
 
 ; @param hl: the address of the last snake body position
 SetNewSnakeTail:
+    ; TODO I can now just read the tile id from the array
+    ; TODO refactor the below
     ; We need the address of the last body part in bc
     ; to read the tile id before the tail
     call LoadLastSnakeBodyPositionAddress
@@ -695,6 +720,7 @@ SetNewSnakeTail:
     inc hl
     ld c, [hl]
     ; bc contains address of last tile in tilemap
+    inc hl ; hl now points to the last byte of the array
 
     ; Load what tile id the tail has. It is called next, but always contains the current tail...
     ld a, [wNextTailTileId]
@@ -715,7 +741,7 @@ SetNewSnakeTail:
     call DebugLoop
 
 SnakeTailWasLeft:
-    call SetEmptyBackgroundTileToLastPosition
+    call SaveLastTailTileAddress
     call ReadTileIdFromTileBeforeTail
 
     cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
@@ -731,7 +757,7 @@ SnakeTailWasLeft:
     call DebugLoop
 
 SnakeTailWasRight:
-    call SetEmptyBackgroundTileToLastPosition
+    call SaveLastTailTileAddress
     call ReadTileIdFromTileBeforeTail
 
     cp a, SNAKE_BODY_HORIZONTAL_TILE_ID
@@ -747,7 +773,7 @@ SnakeTailWasRight:
     call DebugLoop
 
 SnakeTailWasDown:
-    call SetEmptyBackgroundTileToLastPosition
+    call SaveLastTailTileAddress
     call ReadTileIdFromTileBeforeTail
 
     cp a, SNAKE_BODY_VERTICAL_TILE_ID
@@ -763,7 +789,7 @@ SnakeTailWasDown:
     call DebugLoop
 
 SnakeTailWasUp:
-    call SetEmptyBackgroundTileToLastPosition
+    call SaveLastTailTileAddress
     call ReadTileIdFromTileBeforeTail
 
     cp a, SNAKE_BODY_VERTICAL_TILE_ID
@@ -912,23 +938,21 @@ SaveNewPositionToBodyArray:
     ; Also add the tile id of that tile, which is already put
     ; into wNextBodyTileId
 
-    ; inc hl
-    ; ld a, [wNextBodyTileId]
-    ; ld [hl], a
-    
-    ; TODO Adjust move down array loop to move 3 instead of 2 bytes
-    ; TODO Initiazlize method has to also initialize the tile id values as 3rd byte of each item
-    ; the position of each item is still not correct
+    inc hl
+    ld a, [wNextBodyTileId]
+    ld [hl], a
     
     ret
 
 ; hl has to be the last byte of the array for this to work
-; This block overrides the byte pointed to by hl with hl-2
+; This block overrides the byte pointed to by hl with hl-3
 ; After this block hl is decremented by 1
 MoveArrayItemsLoop:
     dec hl
     dec hl
+    dec hl
     ld a, [hli]
+    inc hl
     inc hl
     ld [hld], a
 
@@ -994,6 +1018,8 @@ wNextBodyTileId: db
 
 wNextTailTileAddress: dw
 wNextTailTileId: db
+
+wLastTailTileAddress: dw ; last address where the tail was -> set it to empty tile
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db

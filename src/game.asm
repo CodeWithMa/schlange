@@ -265,10 +265,10 @@ InitializeSnakeBody:
 
     ld bc, SNAKE_INITIAL_BODY_ADDRESS
 
-    ; set first item in wSnakeBodyPositions array
+    ; set first item in wSnakeBodyArray array
     ; +2 because the first item is actually the second,
     ; first one is used for temporary setting the new position when moving
-    ld hl, wSnakeBodyPositions + 2
+    ld hl, wSnakeBodyArray + 2
     ld [hl], b
     inc hl
     ld [hl], c
@@ -276,7 +276,7 @@ InitializeSnakeBody:
     ;ld bc, _SCRN0 + 1; In bc is now the address of the second background tile ID
     ld bc, SNAKE_INITIAL_TAIL_ADDRESS
 
-    ; set second item in wSnakeBodyPositions array
+    ; set second item in wSnakeBodyArray array
     inc hl
     ld [hl], b
     inc hl
@@ -425,7 +425,7 @@ DontEatApple:
 
     call SetBackgroundSnakeTile
 
-    ; hl has to contain pos of last head address. load it
+    ; hl has to contain position of last head address. load it
     ; wNextBodyTileAddress -> hl
     ld a, [wNextBodyTileAddress]
     ld h, a
@@ -462,7 +462,7 @@ MoveHeadPosition:
     jp z, MoveDown
 
     ; this should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 MoveLeft:
     ld a, -1 * TILE_SIZE
@@ -617,7 +617,7 @@ GetSnakeHeadBackgroundTileAddress:
     ret
 
 ; Save the last snake body position address hl into wSnakeLastBodyPositionAddress
-; @return hl: address of last body position
+; @param hl: address of last body position
 SaveAddressOfLastSnakeBodyPart:
     ld a, h
     ld [wSnakeLastBodyPositionAddress], a
@@ -642,6 +642,14 @@ AddBodyPartItem:
     inc hl
     inc hl
     call SaveAddressOfLastSnakeBodyPart
+    ; also update wNextTailTileAddress
+    
+    ld a, [hli]
+    ld [wNextTailTileAddress], a
+    ld a, [hl]
+    ld [wNextTailTileAddress + 1], a
+
+    dec hl ; TODO Check if this is needed
     ret
 
 ; Set empty background tile to last position
@@ -704,7 +712,7 @@ SetNewSnakeTail:
     jp z, SnakeTailWasUp
 
     ; This should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 SnakeTailWasLeft:
     call SetEmptyBackgroundTileToLastPosition
@@ -720,7 +728,7 @@ SnakeTailWasLeft:
     jp z, SetDownTail
 
     ; This should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 SnakeTailWasRight:
     call SetEmptyBackgroundTileToLastPosition
@@ -736,7 +744,7 @@ SnakeTailWasRight:
     jp z, SetDownTail
 
     ; This should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 SnakeTailWasDown:
     call SetEmptyBackgroundTileToLastPosition
@@ -752,7 +760,7 @@ SnakeTailWasDown:
     jp z, SetLeftTail
 
     ; This should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 SnakeTailWasUp:
     call SetEmptyBackgroundTileToLastPosition
@@ -768,7 +776,7 @@ SnakeTailWasUp:
     jp z, SetLeftTail
 
     ; This should never happen -> hang
-    jp DebugLoop
+    call DebugLoop
 
 SetLeftTail:
     ld a, SNAKE_TAIL_LEFT_TILE_ID
@@ -812,7 +820,7 @@ SetBackgroundSnakeTile:
     cp a, SNAKE_MOVE_DOWN
     jp z, MovingFromDownDirection
     
-    jp DebugLoop
+    call DebugLoop
 
 MovingFromLeftDirection:
     ld a, [wSnakeDirection]
@@ -896,10 +904,21 @@ SaveNewPositionToBodyArray:
     ; Before moving every body part back
     ; set the item before the first body part to the one we
     ; are standing on when moving down it will be the first
-    ld hl, wSnakeBodyPositions
+    ld hl, wSnakeBodyArray
     ld [hl], d
     inc hl
     ld [hl], e
+
+    ; Also add the tile id of that tile, which is already put
+    ; into wNextBodyTileId
+
+    ; inc hl
+    ; ld a, [wNextBodyTileId]
+    ; ld [hl], a
+    
+    ; TODO Adjust move down array loop to move 3 instead of 2 bytes
+    ; TODO Initiazlize method has to also initialize the tile id values as 3rd byte of each item
+    ; the position of each item is still not correct
     
     ret
 
@@ -915,7 +934,7 @@ MoveArrayItemsLoop:
 
     ; if hl is base address + 1 we are done
     ; compare first byte of hl
-    ld bc, wSnakeBodyPositions + 1
+    ld bc, wSnakeBodyArray + 1
     ld a, b
     cp a, h
     jp z, MoveArrayItemsLoopIsBaseAddressPart1
@@ -989,11 +1008,13 @@ wIsGameOver: db
 
 ; 20*18 = 360 possible tile positions
 ; Contains the addresses of the tiles in the tilemap on which a body part is
-; Each address needs 2 bytes so 360 * 2 bytes = 720 bytes
-SECTION "Snake Body Positions", WRAM0
-wSnakeBodyPositions: ds 720
+; Also contains the value that the tile has
+; Each address needs 3 bytes so 360 * 3 bytes = 1080 bytes
+; 3 bytes because the addresses take 2 bytes and the value takes 1 byte
+SECTION "Snake Body Array", WRAM0
+wSnakeBodyArray: ds 360 * 3
 
-; Contains the address of the last snake body part in wSnakeBodyPositions
+; Contains the address of the last snake body part in wSnakeBodyArray
 ; (pointer to last snake body part)
 ; If I use this instead of snake size i can directly load the last address
 wSnakeLastBodyPositionAddress: dw

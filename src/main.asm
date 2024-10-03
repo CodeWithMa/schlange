@@ -40,6 +40,11 @@ SECTION "Header", ROM0[$100]
     ds $150 - @, 0 ; Make room for the header
 
 EntryPoint:
+
+    ; initialize variables
+    ld a, 0
+    ld [wFrameCounter], a
+    ld [wCurKeys], a
     
     ; enable the VBlank interrupt
     ld a, IEF_VBLANK

@@ -107,4 +107,4 @@ SetupFortissimo:
 
 ; Extract in utils
 DebugLoop::
-    jp DebugLoop
+    jr DebugLoop

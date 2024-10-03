@@ -656,6 +656,7 @@ AddBodyPartItem:
     call LoadLastSnakeBodyPositionAddress
     inc hl
     inc hl
+    inc hl
     call SaveAddressOfLastSnakeBodyPart
     ; also update wNextTailTileAddress
     

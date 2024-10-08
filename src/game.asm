@@ -144,6 +144,9 @@ ENDR
     ; turned on
     call InitializeSnakeBody
 
+    ; Now copy complete scrn0
+    call CreateInitialScrn0ShadowCopy
+
     call TurnLcdOn
 
     ; During the first (blank) frame, initialize display registers
@@ -374,8 +377,6 @@ MoveSnakePosition:
     ld [wFrameCounter], a
 
     ; Get address of tile the head is on
-    ; TODO Instead of reading from vram i could save the background the head is on
-    ; each time the head moves to a new tile and then just load that value here
     call GetSnakeHeadBackgroundTileAddress
     
     ; Save address on which the head was to wram
@@ -384,6 +385,10 @@ MoveSnakePosition:
     ld a, l
     ld [wNextBodyTileAddress + 1], a
     
+    ; Translate the address so i can always check the value
+    ; without waiting for vblank
+    call TranslateScrn0AddressToShadowCopyAddress
+
     ; Check what kind of tile the head is on
     ld a, [hl]
 
@@ -413,8 +418,8 @@ SetGameOverEnd:
 EatApple:
     ; Add one body part to snake
     call AddBodyPartItem
-    call GetSnakeHeadBackgroundTileAddress
     call SetBackgroundSnakeTile
+    call UpdateNextBodyTileIdInScrn0ShadowCopy
     call LoadNextBodyTileAddressInHl
     call SaveNewPositionToBodyArray
     call LoadLastSnakeBodyPositionAddress
@@ -451,6 +456,7 @@ DontEatApple:
     ld [wUpdateNextBody], a
 
     call SetBackgroundSnakeTile
+    call UpdateNextBodyTileIdInScrn0ShadowCopy
 
     call LoadNextBodyTileAddressInHl
     call SaveNewPositionToBodyArray
@@ -541,7 +547,7 @@ UpdateSnakeHeadTileId:
     ret
 
 ; Loads wNextBodyTileAddress in hl
-; return hl: Next body tile address
+; @return hl: Next body tile address
 ; @trashes: a
 LoadNextBodyTileAddressInHl:
     ld a, [wNextBodyTileAddress]
@@ -554,6 +560,8 @@ LoadNextBodyTileAddressInHl:
 ; loop and move all addresse one down overriding the last one
 MoveSnakeBody:
     call SetNewSnakeTail
+    call SetLastPositionInScrn0ShadowCopyToEmptyTileId
+    call SetNewSnakeTailInScrn0ShadowCopy
     ; MoveArrayItemsLoop expects hl to be the address of the byte of the last item
     call MakeHlContainLastArrayByteAddress
     call MoveArrayItemsLoop
@@ -639,6 +647,7 @@ UpdateDisplayScore:
 ; Get the tilemap address of the background tile
 ; on which the snake head currently is
 ; @return hl: tile address
+; @trashes: a, bc
 GetSnakeHeadBackgroundTileAddress:
     ld a, [wSnakePositionX]
     ; Offset 8 because object position top left corner is not (0,0)
@@ -688,13 +697,6 @@ REPT SNAKE_BODY_ARRAY_ITEM_SIZE
     inc hl
 ENDR
     call SaveAddressOfLastSnakeBodyPart
-    
-    ; TODO Do I need this???
-    ; also update wNextTailTileAddress
-    ; ld a, [hli]
-    ; ld [wNextTailTileAddress], a
-    ; ld a, [hl]
-    ; ld [wNextTailTileAddress + 1], a
 
     ret
 
@@ -734,6 +736,57 @@ ENDR
 
     ; Read tile id from tile before tail
     ld a, [hl]
+
+    ret
+
+; Set last position in my shadow copy to empty tile
+; @trashes: a, hl
+SetLastPositionInScrn0ShadowCopyToEmptyTileId:
+
+    ; TODO 
+    ;call LoadLastSnakeBodyPositionAddress
+    ; TODO Then load value pointed to by hl and hl+1 which is the scrn0 address
+
+    ; OR do this:
+
+    ; This is set so that it works but maybe i should do
+    ; the above call instead
+    ld a, [wLastTailTileAddress]
+    ld h, a
+    ld a, [wLastTailTileAddress + 1]
+    ld l, a
+
+    call TranslateScrn0AddressToShadowCopyAddress
+    ld a, EMPTY_TILE_ID
+    ld [hl], a
+
+    ret
+
+; Update shadow copy of scrn0
+; wNextBodyTileId has the new tile id
+; @trashes: a, de, hl
+UpdateNextBodyTileIdInScrn0ShadowCopy:
+    call LoadNextBodyTileAddressInHl
+    call TranslateScrn0AddressToShadowCopyAddress
+    ld a, [wNextBodyTileId]
+    ld [hl], a
+    
+    ret
+
+; Update shadow scrn0 copy so that the tail tile id
+; is what will be displayed
+SetNewSnakeTailInScrn0ShadowCopy:
+    ; Load next tail tile address
+    ld a, [wNextTailTileAddress]
+    ld h, a
+    ld a, [wNextTailTileAddress + 1]
+    ld l, a
+    
+    call TranslateScrn0AddressToShadowCopyAddress
+
+    ; This will only work if SetNewSnakeTail was called before so that wNextTailTileId contains the next tile id
+    ld a, [wNextTailTileId]
+    ld [hl], a
 
     ret
 
@@ -1063,3 +1116,55 @@ wSnakeBodyArray: ds 360 * 3
 ; (pointer to last snake body part)
 ; If I use this instead of snake size i can directly load the last address
 wSnakeLastBodyPositionAddress: dw
+
+; _SCRN0: $9800->$9BFF
+SECTION "Screen 0 Shadow Copy", WRAM0
+DEF SCRN_SIZE EQU _SCRN1 - _SCRN0 ; Size of one screen
+wScreen0ShadowCopy: ds SCRN_SIZE
+
+; TODO Move to code section above?
+SECTION "Translate SCRN0 address to shadow copy address", ROM0
+
+; The code calculates the offset between SCRN0 and the shadow copy,
+; then adds this offset to the given hl (the current SCRN0 address),
+; effectively translating it to the shadow copy address.
+; @param hl: SCRN0 address
+; @return hl: wScreen0ShadowCopy address
+; @trashes: de
+TranslateScrn0AddressToShadowCopyAddress:
+    ; Calculate the offset from SCRN0 to the shadow copy
+    ld de, wScreen0ShadowCopy - _SCRN0
+    ; Add the offset to the current SCRN0 address in HL
+    add hl, de
+
+    ret
+
+; @param hl: wScreen0ShadowCopy address
+; @return hl: SCRN0 address
+TranslateShadowCopyAddressToScrn0Address:
+    ; Calculate the offset from the shadow copy to SCRN0
+    ld de, _SCRN0 - wScreen0ShadowCopy
+    ; Add the offset to the current shadow copy address in HL
+    add hl, de
+
+    ret
+
+; Create a copy of the initialized scrn0 data
+CreateInitialScrn0ShadowCopy:
+    ; amount of bytes to copy
+    ld bc, SCRN_SIZE
+    ld hl, _SCRN0
+
+CreateInitialScrn0ShadowCopyLoop:
+
+    ld a, [hl]
+    call TranslateScrn0AddressToShadowCopyAddress
+    ld [hli], a
+    call TranslateShadowCopyAddressToScrn0Address
+
+    ; Stop if bc is 0 - All bytes are copied
+    dec bc
+    ld a, b
+    or a, c
+    jp nz, CreateInitialScrn0ShadowCopyLoop
+    ret

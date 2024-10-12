@@ -104,13 +104,6 @@ InitializeGame:
     ld [hli], a
     ld [hli], a
 
-    ; Spawn 3 random apples
-REPT 3
-    call GetRandomEmptyTileAddress
-    ld a, APPLE_TILE_ID
-    ld [hl], a
-ENDR
-
     call ClearOam
 
     ; Once OAM is clear, we can draw an object by writing its properties.
@@ -147,6 +140,22 @@ ENDR
     ; Now copy complete scrn0
     call CreateInitialScrn0ShadowCopy
 
+    ; Spawn 3 random apples
+    ; Spawn the apples after srcn0 copy is made, because
+    ; GetRandomEmptyTileAddress checks the copy to find an empty tile
+REPT 3
+    call GetRandomEmptyTileAddress
+    
+    ; Set apple in shadow copy
+    ld a, APPLE_TILE_ID
+    ld [hl], a
+
+    ; Set apple in vram
+    call TranslateShadowCopyAddressToScrn0Address
+    ld a, APPLE_TILE_ID
+    ld [hl], a
+ENDR
+
     call TurnLcdOn
 
     ; During the first (blank) frame, initialize display registers
@@ -163,6 +172,7 @@ ENDR
     ld [wApplesCounterThirdDigit], a
     ld [wIsGameOver], a
     ld [wUpdateNextBody], a
+    ld [wSpawnNewApple], a
     
     ; Set Snake Speed to 60 -> Move once every second
     ld a, 30
@@ -180,6 +190,7 @@ GameLoop:
     ; which means the display is one turn behind
     call UpdateSnakeOam
     call UpdateBackgroundSnakeTiles
+    call UpdateNewAppleBackgroundTile
     call UpdateScoreBackgroundTiles
 
     call MoveSnakePosition
@@ -348,6 +359,20 @@ UpdateBackgroundSnakeTiles:
     ld a, EMPTY_TILE_ID
     ld [hl], a
 
+    ret
+
+UpdateNewAppleBackgroundTile:
+    ; check if new apple should spawn
+    ld a, [wSpawnNewApple]
+    cp a, FALSE
+    ret z
+
+    ; reset to false
+    ld a, FALSE
+    ld [wSpawnNewApple], a
+
+    call LoadNewAppleSpawnAddress
+    ld [hl], APPLE_TILE_ID
     ret
 
 UpdateScoreBackgroundTiles:
@@ -570,15 +595,44 @@ MoveSnakeBody:
 SpawnNewApple:
     call GetRandomEmptyTileAddress
 
-    ; set background tile to apple
+    ; set shadow copy background tile to apple
     ld [hl], APPLE_TILE_ID
+
+    ; also save it to variable so it can be updated on vblank
+    call TranslateShadowCopyAddressToScrn0Address
+    call SaveNewAppleSpawnAddress
+
+    ; Set flag to true
+    ld a, TRUE
+    ld [wSpawnNewApple], a
+
+    ret
+
+; @param hl: the address to save
+SaveNewAppleSpawnAddress:
+    ld a, h
+    ld [wSpawnNewAppleAddress], a
+    ld a, l
+    ld [wSpawnNewAppleAddress + 1], a
+
+    ret
+
+; @return hl: the new spawn address
+LoadNewAppleSpawnAddress:
+    ld a, [wSpawnNewAppleAddress]
+    ld h, a
+    ld a, [wSpawnNewAppleAddress + 1]
+    ld l, a
+
     ret
 
 ; Get a random empty tile address
-; @return hl: tile address
+; @return hl: shadow copy tile address
 GetRandomEmptyTileAddress:
     call GetRandomTileAddress
     ; hl is the new random background tile address
+
+    call TranslateScrn0AddressToShadowCopyAddress
 
     ; Check if tile is empty
     ld a, [hl]
@@ -1093,6 +1147,10 @@ wLastTailTileAddress: dw ; last address where the tail was -> set it to empty ti
 
 SECTION "Snake Speed", WRAM0
 wSnakeSpeed: db
+
+SECTION "Apple Updates", WRAM0
+wSpawnNewApple: db ; Bool: TRUE if new apple should spawn
+wSpawnNewAppleAddress: dw
 
 SECTION "Apples Counter", WRAM0
 ; Counter for apples. Resets to 0 after collecting 10 apples

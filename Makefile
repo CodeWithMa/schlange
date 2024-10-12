@@ -60,10 +60,10 @@ $(UTIL_DIR)/%.o: $(SRC_DIR)/util/%.asm
 $(OBJ_DIR)/fortISSimO.o: $(SRC_DIR)/fortISSimO/fortISSimO.asm
 	$(RGBASM) $(RGBASM_WARN) -I $(SRC_DIR)/fortISSimO/include -o $@ $<
 
-$(OBJ_DIR)/ievan_polkka.asm: $(SRC_DIR)/music/ievan_polkka.uge
+$(OBJ_DIR)/ievan_polkka.asm: $(SRC_DIR)/music/ievan_polkka.uge src/fortISSimO/target/release/teNOR
 	./src/fortISSimO/target/release/teNOR $< $@ --section-type ROMX --section-name "Song Data Ievan Polkka" --song-descriptor IevanPolkkaSong
 
-$(OBJ_DIR)/astronomia.asm: $(SRC_DIR)/music/astronomia.uge
+$(OBJ_DIR)/astronomia.asm: $(SRC_DIR)/music/astronomia.uge src/fortISSimO/target/release/teNOR
 	./src/fortISSimO/target/release/teNOR $< $@ --section-type ROMX --section-name "Song Data Astronomia" --song-descriptor AstronomiaSong
 
 $(OBJ_DIR)/ievan_polkka.o: $(OBJ_DIR)/ievan_polkka.asm
@@ -95,3 +95,8 @@ clean:
 	rm -r $(OBJ_DIR) $(ROM_NAME).gb $(ROM_NAME).map $(ROM_NAME).sym
 
 .PHONY: all clean dirs
+
+
+# That one *must* be hardcoded; it's only meant to allow the default setting of `${teNOR}` to work.
+src/fortISSimO/target/release/teNOR: src/fortISSimO/Cargo.toml src/fortISSimO/Cargo.lock $(shell find src/fortISSimO/teNOR/src -name '*.rs')
+	env -C src/fortISSimO cargo build -rq

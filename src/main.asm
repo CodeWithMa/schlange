@@ -82,7 +82,7 @@ Main:
 
 CallStartGame:
     call StartGame
-    ; TODO Show Game Over Screen?
+    call ShowGameOver
     jp Main
 
 CallShowHighscore:
@@ -105,9 +105,6 @@ SetupFortissimo:
 	ldh [rNR51], a
 	ld a, $77
 	ldh [rNR50], a
-
-    ld de, IevanPolkkaSong ; This is the song descriptor that was passed to `teNOR`.
-	call hUGE_SelectSong
 
     ret
 

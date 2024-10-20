@@ -23,7 +23,7 @@ Memcopy::
 ; @param bc: Length
 MemcopyWithFontOffset::
     ld a, [de]
-    add a, FONT_NUMBER_OF_TILES
+    add a, FONT_NUMBER_OF_TILES_IN_MEMORY
     ld [hli], a
     inc de
     dec bc

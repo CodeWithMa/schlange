@@ -1,12 +1,13 @@
 INCLUDE "src/include/hardware.inc/hardware.inc"
 INCLUDE "src/include/font.inc"
 
+DEF TEXT_CENTER_START_ADDRESS EQU $9825
 DEF TEXT_START_ADDRESS EQU $9821
 DEF ROW_SIZE EQU $20
 
-SECTION "Highscore Screen", ROM0
+SECTION "Game Over Screen", ROM0
 
-ShowHighscore::
+ShowGameOver::
     ; Do not turn the LCD off outside of VBlank
     call WaitForVBlankInterrupt
 
@@ -16,26 +17,20 @@ ShowHighscore::
 
     ; Load tiles and tilemap
     call LoadFontTiles
+
     call ClearScreen0
 
-    ; Write text to background
-    ld de, TEXT_START_ADDRESS
-    ld hl, HighscoreText
+    ; Write game over text to background
+    ld de, TEXT_CENTER_START_ADDRESS
+    ld hl, GameOverText
     call DrawTextTiles
 
-    ; TODO Load scores and display each on its own row
-    ; Placeholder for now
+    ; Score text
     ld de, TEXT_START_ADDRESS + ROW_SIZE * 2
     ld hl, TodoText
     call DrawTextTiles
 
-    ld de, TEXT_START_ADDRESS + ROW_SIZE * 3
-    ld hl, TodoText
-    call DrawTextTiles
-
-    ld de, TEXT_START_ADDRESS + ROW_SIZE * 4
-    ld hl, TodoText
-    call DrawTextTiles
+    call DrawScoreOfLastGame
 
     call TurnLcdOnNoObj
 
@@ -47,7 +42,7 @@ ShowHighscore::
     ld a, %11100100
     ld [rOBP0], a
 
-WaitInHighscoreScreen:
+WaitInGameOverScreen:
     call WaitForVBlankInterrupt
 
     call UpdateKeys
@@ -57,7 +52,24 @@ WaitInHighscoreScreen:
     and a, PADF_A
     ret nz
 
-    jp WaitInHighscoreScreen
+    jp WaitInGameOverScreen
 
-HighscoreText: db "HIGHSCORE", 255
-TodoText: db "TODO", 255
+DrawScoreOfLastGame:
+    
+    ; TODO address where the text starts
+    ; calculate? or just hardcode
+    ld hl, (TEXT_START_ADDRESS + ROW_SIZE * 2) + 8
+
+    ; Font is loaded so that the values map to tile ids of the numbers
+
+    ld a, [wApplesCounter]
+    ld [hld], a
+    ld a, [wApplesCounterSecondDigit]
+    ld [hld], a
+    ld a, [wApplesCounterThirdDigit]
+    ld [hl], a
+    
+    ret
+
+GameOverText: db "GAME OVER", 255
+TodoText: db "SCORE", 255

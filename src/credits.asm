@@ -8,7 +8,7 @@ SECTION "Credits Screen", ROM0
 
 ShowCredits::
     ; Do not turn the LCD off outside of VBlank
-    call WaitVBlank
+    call WaitForVBlankInterrupt
 
     call TurnLcdOff
 

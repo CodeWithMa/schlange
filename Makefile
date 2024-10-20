@@ -23,6 +23,7 @@ OBJ_FILES = \
 	$(OBJ_DIR)/font.o \
 	$(OBJ_DIR)/fortISSimO.o \
 	$(OBJ_DIR)/game.o \
+	$(OBJ_DIR)/gameover.o \
 	$(OBJ_DIR)/highscore.o \
 	$(OBJ_DIR)/input.o \
 	$(OBJ_DIR)/main.o \

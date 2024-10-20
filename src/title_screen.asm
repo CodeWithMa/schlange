@@ -3,7 +3,7 @@ INCLUDE "src/include/font.inc"
 
 DEF FIRST_MENU_TEXT_START_ADDRESS EQU $9926
 DEF ROW_SIZE EQU $20
-DEF CURSOR_TILE_ID EQU FONT_NUMBER_OF_TILES + 18
+DEF CURSOR_TILE_ID EQU FONT_NUMBER_OF_TILES_IN_MEMORY + 18
 
 DEF MENU_MIN_INDEX EQU 0
 DEF MENU_MAX_INDEX EQU 2
@@ -12,9 +12,13 @@ SECTION "Title Screen", ROM0
 
 ShowTitleScreen::
     ; Do not turn the LCD off outside of VBlank
-    call WaitVBlank
+    call WaitForVBlankInterrupt
 
     call TurnLcdOff
+
+    ; Play title screen song
+    ld de, IevanPolkkaSong ; This is the song descriptor that was passed to `teNOR`.
+	call hUGE_SelectSong
 
     ; Initialize variables
     ld a, 0
@@ -72,7 +76,7 @@ WaitInTitleScreen:
 
 LoadTitleScreenTiles:
     ld de, TitleScreenTiles
-    ld hl, _VRAM9000 + FONT_TILES_SIZE
+    ld hl, _VRAM9000 + FONT_TILES_IN_MEMORY_SIZE
     ld bc, TITLE_SCREEN_TILES_SIZE
     call Memcopy
     ret
@@ -169,7 +173,7 @@ TitleScreenTiles: INCBIN "obj/gfx/title_screen.2bpp"
 TitleScreenTilesEnd:
 DEF TITLE_SCREEN_TILES_SIZE EQU TitleScreenTilesEnd - TitleScreenTiles
 DEF TITLE_SCREEN_NUMBER_OF_TILES EQU TITLE_SCREEN_TILES_SIZE / 16
-STATIC_ASSERT FONT_NUMBER_OF_TILES + TITLE_SCREEN_NUMBER_OF_TILES < 129, "Number of total background tiles is too large!"
+STATIC_ASSERT FONT_NUMBER_OF_TILES_IN_MEMORY + TITLE_SCREEN_NUMBER_OF_TILES < 129, "Number of total background tiles is too large!"
 
 TitleScreenTilemap: INCBIN "obj/gfx/title_screen.tilemap"
 TitleScreenTilemapEnd:

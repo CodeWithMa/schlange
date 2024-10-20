@@ -5,20 +5,29 @@ INCLUDE "src/include/hardware_extensions.inc"
 SECTION "Font", ROM0
 
 FontTiles: INCBIN "obj/gfx/font.2bpp"
-FontTilesEnd:
 
-DEF FONT_TILES_SIZE_CALCULATED EQU FontTilesEnd - FontTiles
-STATIC_ASSERT FONT_TILES_SIZE_CALCULATED == FONT_TILES_SIZE, "Font was changed without updating font.inc!"
-
+; Load the complete font. Starting with the numbers.
+; After that comes the alphabet. After loading some tiles
+; in memory are duplicates of each other. For example the
+; 0 is the same as the O and I is the same as 1.
 LoadFontTiles::
-    ld de, FontTiles
-    ld hl, _VRAM9000
-    ld bc, FONT_TILES_SIZE
+    call LoadFontNumberTilesInOrder
+    
+    ld de, FontTiles + TILE_DATA_SIZE * 0 ; A -> Z
+    ld hl, _VRAM9000 + TILE_DATA_SIZE * 10
+    ld bc, TILE_DATA_SIZE * 26
     call Memcopy
+    
+    ; Also copy symbols like + - : . etc.
+    ld de, FontTiles + TILE_DATA_SIZE * 33 ; / -> EMPTY
+    ld hl, _VRAM9000 + TILE_DATA_SIZE * 36
+    ld bc, TILE_DATA_SIZE * 6
+    call Memcopy
+
     ret
 
 ; This will load the number tiles in order
-LoadFontNumberTilesInOrder::
+LoadFontNumberTilesInOrder:
     ld de, FontTiles + TILE_DATA_SIZE * 14 ; 0
     ld hl, _VRAM9000 + TILE_DATA_SIZE * 0
     ld bc, TILE_DATA_SIZE
@@ -29,7 +38,7 @@ LoadFontNumberTilesInOrder::
     ld bc, TILE_DATA_SIZE
     call Memcopy
 
-    ld de, FontTiles + TILE_DATA_SIZE * 26 ; 2 - 4
+    ld de, FontTiles + TILE_DATA_SIZE * 26 ; 2 -> 4
     ld hl, _VRAM9000 + TILE_DATA_SIZE * 2
     ld bc, TILE_DATA_SIZE * 3
     call Memcopy
@@ -39,7 +48,7 @@ LoadFontNumberTilesInOrder::
     ld bc, TILE_DATA_SIZE
     call Memcopy
 
-    ld de, FontTiles + TILE_DATA_SIZE * 29 ; 6 - 9
+    ld de, FontTiles + TILE_DATA_SIZE * 29 ; 6 -> 9
     ld hl, _VRAM9000 + TILE_DATA_SIZE * 6
     ld bc, TILE_DATA_SIZE * 4
     call Memcopy

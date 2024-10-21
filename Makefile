@@ -89,7 +89,7 @@ $(OBJ_DIR)/title_screen.o: $(SRC_DIR)/title_screen.asm $(GFX_TITLE_SCREEN_TILES)
 # Link object files to create the ROM
 $(ROM_NAME).gb: $(OBJ_FILES)
 	$(RGBLINK) -m $(ROM_NAME).map -n $(ROM_NAME).sym -o $@ $^
-	$(RGBFIX) -t "SCHLANGE" -v -p 0xFF $@
+	$(RGBFIX) -v -t "SCHLANGE" -n "0x1" -p 0xFF -m 0x02 -r 0x02 $@
 
 # Clean up build artifacts
 clean:

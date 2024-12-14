@@ -32,6 +32,10 @@ ShowGameOver::
 
     call DrawScoreOfLastGame
 
+    ; TODO Move into loop?
+    ; TODO Let user choose a 3 char name
+    call SaveScoreOfLastGame
+
     call TurnLcdOnNoObj
 
     ; Put in function?

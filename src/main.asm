@@ -41,6 +41,8 @@ SECTION "Header", ROM0[$100]
 
 EntryPoint:
 
+    call InitializeSaveData
+
     ; initialize global variables
     ld a, 0
     ld [wFrameCounter], a
@@ -55,10 +57,12 @@ EntryPoint:
     ld a, 0
     ldh [rIF], a
 
-    ; enable interrupts
-    ei
-
     call SetupFortissimo
+
+    ; enable interrupts after Fortissimo is set up
+    ; or it could happen that tick is called by the interrupt before
+    ; it is set up
+    ei
 
 Main:
     ; Load and show title screen

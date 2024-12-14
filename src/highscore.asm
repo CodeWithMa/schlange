@@ -23,19 +23,9 @@ ShowHighscore::
     ld hl, HighscoreText
     call DrawTextTiles
 
-    ; TODO Load scores and display each on its own row
-    ; Placeholder for now
+    ; Draw saved scores
     ld de, TEXT_START_ADDRESS + ROW_SIZE * 2
-    ld hl, TodoText
-    call DrawTextTiles
-
-    ld de, TEXT_START_ADDRESS + ROW_SIZE * 3
-    ld hl, TodoText
-    call DrawTextTiles
-
-    ld de, TEXT_START_ADDRESS + ROW_SIZE * 4
-    ld hl, TodoText
-    call DrawTextTiles
+    call DrawHighscores
 
     call TurnLcdOnNoObj
 
@@ -60,4 +50,3 @@ WaitInHighscoreScreen:
     jp WaitInHighscoreScreen
 
 HighscoreText: db "HIGHSCORE", 255
-TodoText: db "TODO", 255
